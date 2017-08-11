@@ -21,6 +21,6 @@ we don't have general census variables available. Again, this kind of weighted r
 ##Examples
 This package has been designed to be used in conjunction with [cancensus](https://github.com/mountainMath/cancensus) to pull in census data, but it also works with other data.
 
-The following example iamge was created using `cancensus` and `dotdensity`, you can find more details by reading throuhg our [language example vignette](http://htmlpreview.github.io/?https://raw.githubusercontent.com/mountainMath/dotdensity/master/vignettes/language-example.nb.html) for a more thorough look, or you can [view the code](vignettes/language-example.Rmd).
+The following example iamge was created using `cancensus` and `dotdensity`, you can find more details by reading throuhg our [language example vignette](http://htmlpreview.github.io/?https://github.com/mountainMath/dotdensity/blob/master/vignettes/languages-example.nb.html) for a more thorough look, or you can [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/languages-example.Rmd).
 
 ![Vancouver languages](vancouver-languages.png)
