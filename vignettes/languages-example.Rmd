@@ -9,7 +9,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-The dot-density functions can be used with any kind of data, but it has been designed with hierarchical
+The [`dotdensity` R package](https://github.com/mountainMath/dotdensity) provides dot-density functions can be used with any kind of data, but it has been designed with hierarchical
 geographic data, like census data, in mind. 
 
 ## Getting the data
@@ -26,7 +26,7 @@ library(cancensus)
 
 
 
-Using the [CensusMapper API toll](https://censusmapper.ca/api/CA16) we select the region and
+Using the [CensusMapper API tool](https://censusmapper.ca/api/CA16) we select the region and
 variables we need,
 ```{r}
 dataset='CA16'
