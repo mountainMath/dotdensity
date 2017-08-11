@@ -1,0 +1,6 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+vignettes/data_cache
+vignettes/data_cache/*

@@ -1,0 +1,176 @@
+---
+title: "Languages Spoken at Home"
+author: "Jens von Bergmann"
+date: "2017-08-10"
+output: html_notebook
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+The dot-density functions can be used with any kind of data, but it has been designed with hierarchical
+geographic data, like census data, in mind. 
+
+## Getting the data
+We will make use of the [cancensus](https://github.com/mountainMath/cancensus) package to obtain census
+data on languages spoken at home in the City of Vancouver, including the areas to the immediate west.
+
+```{r}
+#devtools::install_github('mountainmath/dotdensity')
+library(dotdensity)
+#devtools::install_github('mountainmath/cancensus')
+library(cancensus)
+# options(cancensus.api_key)='<your API key>'
+```
+
+
+
+Using the [CensusMapper API toll](https://censusmapper.ca/api/CA16) we select the region and
+variables we need,
+```{r}
+dataset='CA16'
+regions=list(CT=c("9330069.01","9330069.02"),CSD=c("5915022","5915803")) #list(CMA="59933")
+vectors=c("v_CA16_1355","v_CA16_1364","v_CA16_2060","v_CA16_2066","v_CA16_2153","v_CA16_1916","v_CA16_1937","v_CA16_1973","v_CA16_1727")
+
+
+```
+where we setttled for the City of Vancouver, together with Musqueam to and the UBC/UEL area.
+
+We start out by defining a `basemap` on which to plot our data.
+```{r, echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=4}
+theme_opts<-list(ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
+                       panel.grid.major = ggplot2::element_blank(),
+                       panel.background = ggplot2::element_rect(fill = 'light blue', colour = NA),
+                       plot.background = ggplot2::element_rect(fill="light grey",
+                       size=1,linetype="solid",color="black"),
+                       axis.line = ggplot2::element_blank(),
+                       axis.text.x = ggplot2::element_blank(),
+                       axis.text.y = ggplot2::element_blank(),
+                       axis.ticks = ggplot2::element_blank(),
+                       axis.title.x = ggplot2::element_blank(),
+                       axis.title.y = ggplot2::element_blank(),
+                       plot.title = ggplot2::element_text(size=22)))
+
+base_geom <- cancensus.load(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
+
+basemap <-   ggplot2::ggplot(base_geom) +
+    ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), fill = "white", size=0.1) +
+    #ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), colour = "#222222", fill = "white", size=0.1) +
+    ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(size=2))) +
+    ggplot2::labs(color = "label",caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca") +
+    ggplot2::coord_map(projection="lambert", lat0=49, lat=49.4) +
+    theme_opts
+basemap
+```
+
+
+We have defined a convenience function `prep_data` that renames variables and computes the "Other" language categority as a catch-all for the lanugages we don't explicitly list.
+```{r, message=TRUE, warning=TRUE, include=FALSE}
+# rename columns for better readability and compute aggregates
+prep_data <- function(geo){
+  data <- geo@data %>% replace(is.na(.), 0)
+  labels <- attributes(geo)$census_labels
+  
+  # in labels, drop text in parenthesis for brevity
+  labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)] <-  gsub("(\\w+)\ \\(.*\\)","\\1",labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)])
+  
+  labels$Detail[grep("Total",labels$Detail)]="Total"
+  labels$Detail[grep("English and",labels$Detail)]="English + Other"
+  
+  total=labels$Vector[labels$Detail=="Total"]
+  others=setdiff(labels$Vector,c(total))
+  
+  data$Other <- data[[total]]
+  old_names=names(data)
+  for (i in 1:length(others)) {
+    data$Other <- data$Other - unlist(data %>% select_(as.name(others[i])))
+    old_names[old_names==others[i]] <- labels$Detail[labels$Vector==others[i]]
+  }
+  names(data)=old_names
+
+  geo@data <- data
+  attributes(geo)$census_labels <- labels
+  return(geo)
+}
+```
+Armed with this function we can now read in census tract level data.
+```{r, message=FALSE, warning=FALSE}
+
+data_ct <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
+
+```
+
+## Mapping
+
+The categories we want to map consist of all the loaded census language variables, except for the "Total" category that we want to replace with the computed "Other" category. We pick colours to represent these, decide on a scale (how many dots per person) to map as well as the opacity and size of each dot.
+```{r}
+# Set the categorie we want to map. Those are the labels except we want to replace the "Total" with the "Other" column
+categories=append(setdiff(attributes(data_ct)$census_labels$Detail,c("Total")),"Other")
+colors=c("#a0a0a0", "#0000ff", "#ff0000", "#ffff00", "#00ff00", "#00ffff", "#ff00ff", "#660066", "#006600")
+scale=25
+alpha=0.75
+size=1
+
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+# set map title using the scale and colour values
+title=paste0("Languages Spoken at Home\n1 dot = ",scale," people")
+basemap <- basemap + ggplot2::scale_colour_manual(title,values = colors) 
+```
+
+Now all that's left to do is to create the dot-density map. Dot-density maps are hard for many reasons.
+We have to randomly distribute the number of dots in each region. Often we scale the number of dots
+we want to draw so that one dot represents several people. This is what the *scale* parameter does in our function call. When the scale is greater than 1, we need to round to an integer number of dots. Using regular rounding may introduce systematic erros. For example, if the scale is 50 and one category we are mapping has many areas with 20 people. Regular rounding will round all of these to zero, and the visual effect is that none of these areas will appear to have any people of that category. To deal with this we can replace regular rounding with statistical rounding so that the total number of dots will be unbiased. The *plot* function in out `dotdensity` package has that built in.
+```{r, fig.height=10, fig.width=10}
+dots.ct <- dot_density.compute_dots(geo_data = data_ct, categories = categories, scale=scale)
+basemap + dot_density.dots_map(dots=dots.ct,alpha=alpha,size=size)
+```
+
+While the broad geographic patterns are clearly visible, the uniform distribution of dots in each census tract is very noticeable and gives the map an unnatural feel.
+
+## Refining the Map
+
+We can remedy this by using dissemination area data, which we can query by simply replacing the changing parameter from "CT" to "DA" in the `cancensus` call.
+```{r}
+data_da <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
+```
+
+However, dissemination level data tends to systematically under-count variables. That is because the data preparation with privacy and poor data quality suppression and statistical rounding near zero are not unbiased. 
+
+In our case that difference won't be large as we can see 
+```{r}
+print(paste0("Missing counts at DA level: ",sum(data_ct$Mandarin)-sum(data_da$Mandarin)))
+```
+But it is a problem that we in genral should not ignore.
+We can remedy this by computing the undercount for the dissemination areas in each census tract and assigning the missing counts proportionally to the population in each area. This is exactly what another convenience function int he `dotdensity` package does.
+
+```{r}
+data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+print(paste0("Missing after adjustment: ",sum(data_ct$Mandarin)-sum(data_da$Mandarin)))
+```
+
+Plotting this we get the exact same number of dots as before, but with finer geographic distribution.
+```{r, fig.height=7, fig.width=7}
+dots.da <- dot_density.compute_dots(geo_data = data_da, categories = categories, scale=scale)
+basemap + dot_density.dots_map(dots=dots.da,alpha=alpha,size=size)
+```
+
+We still notice that dots are placed in weird spaces, for example in the Stanley Park and Pacific Spirit Park. We can refine the re-aggregaion process clustering the dots according to dissemination block level population counts.
+```{r, fig.height=7, fig.width=7, message=FALSE, warning=FALSE}
+data_db <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
+data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+
+dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
+basemap + dot_density.dots_map(dots=dots.db,alpha=alpha,size=size)
+```
+This now gives a map that is much closer to our everyday experience, and is intuitive and visually appealing. However, the better we get at placing dots and the fewer visual clues of the random processes used to produce these maps remain, readers may be lead to believe that the map has an accuracy that does not exist. The scaling, drawing 1 dot for every 25 people, is the only reminder that dot locations are approximate.
+
+### Takeway
+The takeaway of this example is that having multiple levels of data available in R allows us to produce intuitive representation of multi-category data. The package almost automatically takes care of several pitfalls and challenges when producing dot-density maps, including statistical rounding for unbiased scaling, re-aggregating of data to recover under-counts at finer aggregation levels, as well as the geographic weighting by dissemination block population counts.
+
+The convenience of using `cancensus` to pull in the data can't be under-stated. In this example, we easily assembled mixed geographic levels, two CSDs and two CTs to cut out the area we were interested in and obtained select variables at three different aggregation levels without even breaking a sweat. And when sharing the code, we don't need to share the data as a simple API call will import it.
+
+It is straight-forward to adapt the example by changing the region parameter to almost instantly reproduce the map for other areas of interest, or change the lanugages we break out. This makes this a reproducible and very adaptable tool.
