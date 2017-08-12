@@ -9,13 +9,12 @@ Description: The package provides convenience methods for multiple category dot-
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Depends:
-  dplyr (>= 0.7.2)
-Imports:
+Depends: dplyr (>= 0.7.2)
 Suggests: knitr,
   cancensus,
   ggplot2 (>= 2.2.1.9000),
   sp,
+  rmarkdown
 VignetteBuilder: knitr
 URL: https://github.com/mountainMath/dotdensity
 BugReports: https://github.com/mountainMath/dotdensity/issues

@@ -90,7 +90,7 @@ prep_data <- function(geo){
   names(data)=old_names
 
   geo@data <- data
-  attributes(geo)$census_labels <- labels
+  attributes(geo)$dot_labels <- labels
   return(geo)
 }
 ```
@@ -106,7 +106,7 @@ data_ct <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, region
 The categories we want to map consist of all the loaded census language variables, except for the "Total" category that we want to replace with the computed "Other" category. We pick colours to represent these, decide on a scale (how many dots per person) to map as well as the opacity and size of each dot.
 ```{r}
 # Set the categorie we want to map. Those are the labels except we want to replace the "Total" with the "Other" column
-categories=append(setdiff(attributes(data_ct)$census_labels$Detail,c("Total")),"Other")
+categories=append(setdiff(attributes(data_ct)$dot_labels$Detail,c("Total")),"Other")
 colors=c("#a0a0a0", "#0000ff", "#ff0000", "#ffff00", "#00ff00", "#00ffff", "#ff00ff", "#660066", "#006600")
 scale=25
 alpha=0.75
