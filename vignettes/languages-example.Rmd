@@ -52,7 +52,7 @@ theme_opts<-list(ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                        axis.title.y = ggplot2::element_blank(),
                        plot.title = ggplot2::element_text(size=22)))
 
-base_geom <- cancensus.load(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
+base_geom <- get_census(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
 
 basemap <-   ggplot2::ggplot(base_geom) +
     ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), fill = "white", size=0.1) +
@@ -70,7 +70,7 @@ We have defined a convenience function `prep_data` that renames variables and co
 # rename columns for better readability and compute aggregates
 prep_data <- function(geo){
   data <- geo@data %>% replace(is.na(.), 0)
-  labels <- attributes(geo)$census_labels
+  labels <- census_vectors(geo)
   
   # in labels, drop text in parenthesis for brevity
   labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)] <-  gsub("(\\w+)\ \\(.*\\)","\\1",labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)])
@@ -97,7 +97,7 @@ prep_data <- function(geo){
 Armed with this function we can now read in census tract level data.
 ```{r, message=FALSE, warning=FALSE}
 
-data_ct <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
+data_ct <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
 
 ```
 
@@ -135,7 +135,7 @@ While the broad geographic patterns are clearly visible, the uniform distributio
 
 We can remedy this by using dissemination area data, which we can query by simply replacing the changing parameter from "CT" to "DA" in the `cancensus` call.
 ```{r}
-data_da <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
+data_da <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
 ```
 
 However, dissemination level data tends to systematically under-count variables. That is because the data preparation with privacy and poor data quality suppression and statistical rounding near zero are not unbiased. 
@@ -160,7 +160,7 @@ basemap + dot_density.dots_map(dots=dots.da,alpha=alpha,size=size)
 
 We still notice that dots are placed in weird spaces, for example in the Stanley Park and Pacific Spirit Park. We can refine the re-aggregaion process clustering the dots according to dissemination block level population counts.
 ```{r, fig.height=7, fig.width=7, message=FALSE, warning=FALSE}
-data_db <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
+data_db <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
 data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
 
 dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)

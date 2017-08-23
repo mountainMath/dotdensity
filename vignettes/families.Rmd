@@ -1,5 +1,5 @@
 ---
-title: "Age groups"
+title: "Families"
 author: "Jens von Bergmann"
 date: "2017-08-10"
 output: html_notebook
@@ -33,7 +33,7 @@ variables we need.
 dataset='CA16'
 regions=list(CT=c("9330069.01","9330069.02"),CSD=c("5915022","5915803")) #list(CMA="59933")
 vectors=c("v_CA16_492","v_CA16_493","v_CA16_497","v_CA16_501")
-census_data <- cancensus.load(dataset='CA16', regions=regions, vectors=vectors, level='CT')
+census_data <- get_census(dataset='CA16', regions=regions, vectors=vectors, level='CT')
 
 ```
 
@@ -51,7 +51,7 @@ theme_opts<-list(ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
                        axis.title.y = ggplot2::element_blank(),
                        plot.title = ggplot2::element_text(size=22)))
 
-base_geom <- cancensus.load(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
+base_geom <- get_census(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
 
 basemap <-   ggplot2::ggplot(base_geom) +
     ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), fill = "white", size=0.1) +
@@ -69,7 +69,7 @@ We have defined a convenience function `prep_data` that renames variables.
 prep_data <- function(geo){
   data <- geo@data %>% replace(is.na(.), 0) 
   
-  labels <- attributes(geo)$census_labels
+  labels <- census_vectors(geo)
   labels$Detail[labels$Vector=="v_CA16_497"]="Lone-parent census families"
   labels$Detail[labels$Vector=="v_CA16_501"]="Persons not in census families"
 
@@ -81,16 +81,16 @@ prep_data <- function(geo){
   names(data)=old_names
 
   geo@data <- data
-  attributes(geo)$dot_labels <- labels
+  attr(geo,'dot_labels') <- labels
   return(geo)
 }
 ```
 Armed with that we load in the geographic data for the dissemination blocks and the census data for the dissemination areas. As a pre-caution the census tract level data in case we are missing dissemmination block level data due to privacy or quality concerns.
 ```{r, message=FALSE, warning=FALSE}
 
-data_ct <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
-data_da <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
-data_db <- cancensus.load(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
+data_ct <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
+data_da <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
+data_db <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
 ```
 ## Mapping
 
