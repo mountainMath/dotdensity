@@ -1,0 +1,120 @@
+---
+title: "Vignette Title"
+author: "Vignette Author"
+date: "`r Sys.Date()`"
+output: html_notebook
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+Multi-category dot-density maps often work well when the categories cluster geographically. Recent immigrants by
+country of origin work well for this.
+## Data
+First we grab the immigrant data via [cancensus](https://github.com/mountainMath/cancensus), making use of the [CensusMapper API tool](https://censusmapper.ca/api/CA11) to select the regions and variables we need.
+```{r, message=FALSE, warning=FALSE}
+#devtools::install_github("mountainmath/cancensus")
+library(cancensus)
+library(dotdensity)
+# options(cancensus.api_key='your_api_key')
+regions=list(CMA="59933")
+vectors=c("v_CA11N_265","v_CA11N_268","v_CA11N_304","v_CA11N_334","v_CA11N_373","v_CA11N_376","v_CA11N_379","v_CA11N_382")
+```
+
+We choose the categories and colours we want to map and define a convenience function to rename the variables and compute the qantities for the other asian countries that we don't break out.
+```{r}
+categories=c("Americas","Europe","Africa","Philippines","China","India","Other Asian Countries")
+colors=c("#7a0177", "#3333cc", "#ff00ff", "#00ffff", "#ff1a1c", "#4dff4a", "#ffff33")
+
+prep_data <- function(geo){
+  data <- geo@data %>% replace(is.na(.), 0)
+  data <- rename(data,
+    total=v_CA11N_265,
+    Americas=v_CA11N_268,                                  
+    Europe=v_CA11N_304,
+    Africa=v_CA11N_334,
+    Philippines=v_CA11N_376,
+    China=v_CA11N_379,
+    India=v_CA11N_382)
+  data <- mutate(data,`Other Asian Countries` = v_CA11N_373-Philippines-China-India)
+  geo@data <- data
+  return(geo)
+}
+```
+
+
+Next we grab the data via `cancensus`,
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+data_csd=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CSD') %>% prep_data
+data_ct=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CT') %>% prep_data
+data_da=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='DA') %>% prep_data
+data_db=get_census(dataset = 'CA11', regions=regions,geo_format='sp',labels='short',level='DB')
+```
+
+which we then re-aggregate to make sure we don't miss overall counts due to privacy cutoffs distribute them
+proportionally among the population.
+```{r}
+data_ct@data <- dot_density.proportional_re_aggregate(data=data_ct@data,parent_data=data_csd@data,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
+data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+theme_opts<-list(theme(panel.grid.minor = element_blank(),
+                       panel.grid.major = element_blank(),
+                       panel.background = element_rect(fill = 'dark grey', colour = NA),
+                       plot.background = element_rect(fill="dark grey", size=1,linetype="solid",color="black"),
+                       axis.line = element_blank(),
+                       axis.text.x = element_blank(),
+                       axis.text.y = element_blank(),
+                       axis.ticks = element_blank(),
+                       axis.title.x = element_blank(),
+                       axis.title.y = element_blank(),
+                       plot.title = element_text(size=80,hjust = 0.5),
+                       plot.subtitle = element_text(size=60,hjust = 0.5),
+                       plot.caption = element_text(size=25),
+                       legend.title = element_text(size=40),
+                       legend.text = element_text(size=40),
+                       legend.background = element_rect(fill="dark grey", size=1,linetype="solid",color="dark grey"),
+                       legend.key = element_rect(fill = 'dark grey',color = 'dark grey'),
+                       legend.key.width = unit(3, 'lines'),
+                       legend.position = "bottom"))
+
+basemap <-   ggplot(data_csd) +
+    geom_polygon(aes(long, lat, group = group), fill = "black", size=0.1, color = 'grey') +
+    guides(colour = guide_legend(nrow=1,override.aes = list(size=15))) +
+    coord_map(projection="lambert", lat0=49, lat=49.4) +
+    theme_opts
+
+```
+
+
+##Map
+All that's left to do is to covert our re-aggregated block-level data to dots, using the `dot_density.compute_dots`
+function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
+our basemap.
+```{r, fig.height=13, fig.width=13, message=TRUE, warning=TRUE}
+# 1 dot = 5 immigrants
+scale=5
+
+dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
+basemap +
+# shade unpopulated blocks
+#  geom_polygon(data=data_db[data_db$Population<=5,], 
+#                        aes(long, lat, group = group), 
+#                        fill = "#222222", size=0.1, 
+#                        color = "#222222") +
+  scale_colour_manual(values = colors) +
+  labs(color = "",
+                title="Immigrants 2006 - 2011",
+                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+                subtitle = paste0("1 dot = ",scale," people")) + 
+  dot_density.dots_map(dots=dots.db,alpha=0.75,size=0.25)
+
+# save image for later
+ggsave('../images/recent_immigrants.png',width=26,height=26)
+```
+
