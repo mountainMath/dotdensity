@@ -18,10 +18,21 @@ Census data a fine geographies may under-count the total number of people due to
 Furthermore, the same method allows the geographic weighting of data to fine block-level population data, where
 we don't have general census variables available. Again, this kind of weighted re-distribution emphasise the problem with dot-density maps that they suggest an accuracy that does not exist, but on the other hand it produces very accurate representations of other aspects of the data, like general population density.
 
+## API Considerations
+Dot-density maps re-aggregating the data down to census block level hits the CensusMapper API pretty hard, and
+you may blow through your free API quota in no time. We may be able to find funding to increase the free quote in
+the future, but for now it's a good thing to test the API call before executing. The example vignetts are safe to
+run though, the data comes packaged with the R package and it will only hit the cache and not the CensusMapper server,
+so no API points will get deducted. In fact, you don't even have to get your API key to run them.
+
 ## Examples
 This package has been designed to be used in conjunction with [cancensus](https://github.com/mountainMath/cancensus) to pull in census data, but it also works with other data.
 
 The following example iamge was created using `cancensus` and `dotdensity`, you can find more details by reading throuhg our [language example vignette](https://mountainmath.ca/languages-example.nb.html) for a more thorough look, or you can [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/languages-example.Rmd).
+
+
+![Vancouver recent immigrants](images/recent_immigrants.png)
+
 
 ![Vancouver languages](images/vancouver-languages.png)
 Similarly there are other vignettes in the package that look at patterns where recent immigrants settle

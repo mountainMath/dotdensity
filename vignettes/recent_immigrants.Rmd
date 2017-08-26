@@ -63,28 +63,31 @@ data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_d
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE}
 library(ggplot2)
+bg_color="#111111"
+base_color="#333333"
+text_color="#eeeeee"
 theme_opts<-list(theme(panel.grid.minor = element_blank(),
                        panel.grid.major = element_blank(),
-                       panel.background = element_rect(fill = 'dark grey', colour = NA),
-                       plot.background = element_rect(fill="dark grey", size=1,linetype="solid",color="black"),
+                       panel.background = element_rect(fill = bg_color, colour = NA),
+                       plot.background = element_rect(fill=bg_color, size=1,linetype="solid",color=text_color),
                        axis.line = element_blank(),
                        axis.text.x = element_blank(),
                        axis.text.y = element_blank(),
                        axis.ticks = element_blank(),
                        axis.title.x = element_blank(),
                        axis.title.y = element_blank(),
-                       plot.title = element_text(size=80,hjust = 0.5),
-                       plot.subtitle = element_text(size=60,hjust = 0.5),
-                       plot.caption = element_text(size=25),
-                       legend.title = element_text(size=40),
-                       legend.text = element_text(size=40),
-                       legend.background = element_rect(fill="dark grey", size=1,linetype="solid",color="dark grey"),
-                       legend.key = element_rect(fill = 'dark grey',color = 'dark grey'),
+                       plot.title = element_text(size=80,hjust = 0.5, color=text_color),
+                       plot.subtitle = element_text(size=60,hjust = 0.5, color=text_color),
+                       plot.caption = element_text(size=25, color=text_color),
+                       legend.title = element_text(size=40, color=text_color),
+                       legend.text = element_text(size=40, color=text_color),
+                       legend.background = element_rect(fill=bg_color, size=1,linetype="solid",color=bg_color),
+                       legend.key = element_rect(fill = bg_color,color = bg_color),
                        legend.key.width = unit(3, 'lines'),
                        legend.position = "bottom"))
 
 basemap <-   ggplot(data_csd) +
-    geom_polygon(aes(long, lat, group = group), fill = "black", size=0.1, color = 'grey') +
+    geom_polygon(aes(long, lat, group = group), fill = base_color, size=0.1, color = 'grey') +
     guides(colour = guide_legend(nrow=1,override.aes = list(size=15))) +
     coord_map(projection="lambert", lat0=49, lat=49.4) +
     theme_opts
@@ -96,12 +99,15 @@ basemap <-   ggplot(data_csd) +
 All that's left to do is to covert our re-aggregated block-level data to dots, using the `dot_density.compute_dots`
 function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
 our basemap.
-```{r, fig.height=13, fig.width=13, message=TRUE, warning=TRUE}
+```{r, fig.height=10, fig.width=13, message=TRUE, warning=TRUE}
 # 1 dot = 5 immigrants
 scale=5
 
+
 dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
 basemap +
+  # zoom in a bit
+  coord_fixed(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35), ratio = 1/cos(49.2/180*pi)) +
 # shade unpopulated blocks
 #  geom_polygon(data=data_db[data_db$Population<=5,], 
 #                        aes(long, lat, group = group), 
