@@ -31,6 +31,8 @@ This package has been designed to be used in conjunction with [cancensus](https:
 The following example iamge was created using `cancensus` and `dotdensity`, you can find more details by reading throuhg our [language example vignette](https://mountainmath.ca/languages-example.nb.html) for a more thorough look, or you can [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/languages-example.Rmd).
 
 
+![Toronto Buildings](images/dwellings.png)
+
 ![Vancouver recent immigrants](images/recent_immigrants.png)
 
 

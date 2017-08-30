@@ -1,0 +1,130 @@
+---
+title: "Building Types"
+author: "Jens von Bergmann"
+date: "2017-08-30"
+output: html_notebook
+vignette: >
+  %\VignetteIndexEntry{Building Types}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+This example demonstrates how to map dwelling units by primary rensidence status and structural type for primary residences.
+## Data
+First we grab the building data via [cancensus](https://github.com/mountainMath/cancensus), making use of the [CensusMapper API tool](https://censusmapper.ca/api/CA11) to select the regions and variables we need.
+```{r, message=FALSE, warning=FALSE}
+#devtools::install_github("mountainmath/cancensus")
+library(cancensus)
+library(dotdensity)
+# options(cancensus.api_key='your_api_key')
+dataset='CA16'
+regions=list(CSD="3520005")
+vectors <- search_census_vectors("structural type of dwelling",dataset) %>%
+  child_census_vectors(TRUE) %>%  
+  pull(vector)
+```
+
+We choose the categories and colours we want to map and define a convenience function to rename the variables and compute the qantities for the other asian countries that we don't break out.
+```{r}
+
+labels=list(v_CA16_417="Movable Dwelling",                                  
+            v_CA16_409="Single Detached",
+            v_CA16_416="Other Single Attached",
+            v_CA16_414="Duplex",
+            v_CA16_412="Semi Detached",
+            v_CA16_413="Row House",
+            v_CA16_415="Apartment, < 5 storeys",
+            v_CA16_410="Apartment, >= 5 storeys")
+
+categories=c("Non-primary Residence",as.character(labels))
+colors=setNames(
+  c("#cccccc","#7a0177", "#ffff00", "#ffcc00", "#ff6600", "#ff0066", "#ff00ff", "#4dff4a", "#00ffff"),
+  categories)
+
+
+prep_data <- function(geo){
+  data <- geo@data %>% replace(is.na(.), 0)
+  names(data)[names(data) %in% names(labels)] <- as.character(labels[names(data)[names(data) %in% names(labels)]])
+  data <- data %>% 
+    mutate(`Non-primary Residence`=Dwellings - Households)
+  geo@data <- data
+  return(geo)
+}
+```
+
+
+Next we grab the data via `cancensus`,
+```{r, echo=TRUE, message=FALSE, warning=FALSE}
+data_csd=get_census(dataset = dataset, regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CSD') %>% prep_data
+data_ct=get_census(dataset = dataset, regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CT') %>% prep_data
+data_da=get_census(dataset = dataset, regions=regions,vectors=vectors,geo_format='sp',labels='short',level='DA') %>% prep_data
+data_db=get_census(dataset = dataset, regions=regions,geo_format='sp',labels='short',level='DB')
+```
+
+which we then re-aggregate to make sure we don't miss overall counts due to privacy cutoffs distribute them
+proportionally among the population.
+```{r}
+data_ct@data <- dot_density.proportional_re_aggregate(data=data_ct@data,parent_data=data_csd@data,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Dwellings")
+data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Dwellings")
+data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Dwellings")
+```
+
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE}
+library(ggplot2)
+bg_color="#444444"
+base_color="#111111"
+text_color="#eeeeee"
+theme_opts<-list(theme(panel.grid.minor = element_blank(),
+                       panel.grid.major = element_blank(),
+                       panel.background = element_rect(fill = bg_color, colour = NA),
+                       plot.background = element_rect(fill=bg_color, size=1,linetype="solid",color=text_color),
+                       axis.line = element_blank(),
+                       axis.text.x = element_blank(),
+                       axis.text.y = element_blank(),
+                       axis.ticks = element_blank(),
+                       axis.title.x = element_blank(),
+                       axis.title.y = element_blank(),
+                       plot.title = element_text(size=80,hjust = 0.5, color=text_color),
+                       plot.subtitle = element_text(size=60,hjust = 0.5, color=text_color),
+                       plot.caption = element_text(size=25, color=text_color),
+                       legend.title = element_text(size=40, color=text_color),
+                       legend.text = element_text(size=30, color=text_color),
+                       legend.background = element_rect(fill=bg_color, size=1,linetype="solid",color=bg_color),
+                       legend.key = element_rect(fill = bg_color,color = bg_color),
+                       legend.key.width = unit(3, 'lines'),
+                       legend.position = "bottom"))
+
+basemap <-   ggplot(data_csd) +
+    geom_polygon(aes(long, lat, group = group), fill = base_color, size=0.1, color = 'grey') +
+    guides(colour = guide_legend(nrow=2,override.aes = list(size=15))) +
+    #coord_map(projection="lambert", lat0=49, lat=49.4) +
+    theme_opts
+
+```
+
+
+##Map
+All that's left to do is to covert our re-aggregated block-level data to dots, using the `dot_density.compute_dots`
+function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
+our basemap.
+```{r, fig.height=10, fig.width=13, message=TRUE, warning=TRUE}
+# 1 dot = x dwelling units
+scale=10
+
+
+#dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
+basemap +
+  # zoom in a bit
+  #coord_fixed(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35), ratio = 1/cos(49.2/180*pi)) +
+  scale_colour_manual(values = colors) +
+  labs(color = "",
+                title="Dwelling Units 2016",
+                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+                subtitle = paste0("1 dot = ",scale," dwelling units")) + 
+  dot_density.dots_map(dots=dots.db,alpha=0.9,size=0.25)
+
+# save image for later
+ggsave('../images/dwellings.png',width=26,height=26)
+```
+
