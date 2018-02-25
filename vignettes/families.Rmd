@@ -69,7 +69,7 @@ We have defined a convenience function `prep_data` that renames variables.
 prep_data <- function(geo){
   data <- geo@data %>% replace(is.na(.), 0) 
   
-  labels <- census_vectors(geo)
+  labels <- label_vectors(geo)
   labels$Detail[labels$Vector=="v_CA16_497"]="Lone-parent census families"
   labels$Detail[labels$Vector=="v_CA16_501"]="Persons not in census families"
 

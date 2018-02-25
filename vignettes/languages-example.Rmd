@@ -70,7 +70,7 @@ We have defined a convenience function `prep_data` that renames variables and co
 # rename columns for better readability and compute aggregates
 prep_data <- function(geo){
   data <- geo@data %>% replace(is.na(.), 0)
-  labels <- census_vectors(geo)
+  labels <- label_vectors(geo)
   
   # in labels, drop text in parenthesis for brevity
   labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)] <-  gsub("(\\w+)\ \\(.*\\)","\\1",labels$Detail[grep("\\w+\ \\(.*\\)",labels$Detail)])

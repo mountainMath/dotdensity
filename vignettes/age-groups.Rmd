@@ -112,7 +112,7 @@ basemap <- basemap + ggplot2::scale_colour_manual(title,values = colors)
 
 
 All that's left to do is re-aggregate the data and compute the dot locations and map them.
-```{r, fig.width=12}
+```{r final-plot, fig.width=12}
 data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
 data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
 

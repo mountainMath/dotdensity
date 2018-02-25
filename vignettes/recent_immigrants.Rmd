@@ -19,15 +19,30 @@ library(cancensus)
 library(dotdensity)
 # options(cancensus.api_key='your_api_key')
 regions=list(CMA="59933")
-vectors=c("v_CA11N_265","v_CA11N_268","v_CA11N_304","v_CA11N_334","v_CA11N_373","v_CA11N_376","v_CA11N_379","v_CA11N_382")
+vectors_2011=c("v_CA11N_265","v_CA11N_268","v_CA11N_304","v_CA11N_334","v_CA11N_373","v_CA11N_376","v_CA11N_379","v_CA11N_382")
+vectors=c("v_CA16_3636","v_CA16_3639","v_CA16_3669","v_CA16_3699","v_CA16_3741","v_CA16_3810","v_CA16_3750","v_CA16_3756","v_CA16_3783")
 ```
 
 We choose the categories and colours we want to map and define a convenience function to rename the variables and compute the qantities for the other asian countries that we don't break out.
 ```{r}
-categories=c("Americas","Europe","Africa","Philippines","China","India","Other Asian Countries")
+categories=c("Americas","Europe","Africa + Oceania","Philippines","China","India","Other Asian Countries")
 colors=c("#7a0177", "#3333cc", "#ff00ff", "#00ffff", "#ff1a1c", "#4dff4a", "#ffff33")
 
 prep_data <- function(geo){
+  data <- geo@data %>% replace(is.na(.), 0)
+  data <- rename(data,
+    total=v_CA16_3636,
+    Americas=v_CA16_3639,                                  
+    Europe=v_CA16_3669,
+    Philippines=v_CA16_3783,
+    China=v_CA16_3750,
+    India=v_CA16_3756)
+  data <- mutate(data,`Other Asian Countries` = v_CA16_3741-Philippines-China-India,
+                     `Africa + Oceania`=v_CA16_3699 + v_CA16_3810)
+  geo@data <- data
+  return(geo)
+}
+prep_data_2011 <- function(geo){
   data <- geo@data %>% replace(is.na(.), 0)
   data <- rename(data,
     total=v_CA11N_265,
@@ -46,10 +61,10 @@ prep_data <- function(geo){
 
 Next we grab the data via `cancensus`,
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
-data_csd=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CSD') %>% prep_data
-data_ct=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CT') %>% prep_data
-data_da=get_census(dataset = 'CA11', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='DA') %>% prep_data
-data_db=get_census(dataset = 'CA11', regions=regions,geo_format='sp',labels='short',level='DB')
+data_csd=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CSD') %>% prep_data
+data_ct=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CT') %>% prep_data
+data_da=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='DA') %>% prep_data
+data_db=get_census(dataset = 'CA16', regions=regions,geo_format='sp',labels='short',level='DB')
 ```
 
 which we then re-aggregate to make sure we don't miss overall counts due to privacy cutoffs distribute them
@@ -76,11 +91,11 @@ theme_opts<-list(theme(panel.grid.minor = element_blank(),
                        axis.ticks = element_blank(),
                        axis.title.x = element_blank(),
                        axis.title.y = element_blank(),
-                       plot.title = element_text(size=80,hjust = 0.5, color=text_color),
-                       plot.subtitle = element_text(size=60,hjust = 0.5, color=text_color),
+                       plot.title = element_text(size=70,hjust = 0.5, color=text_color),
+                       plot.subtitle = element_text(size=50,hjust = 0.5, color=text_color),
                        plot.caption = element_text(size=25, color=text_color),
-                       legend.title = element_text(size=40, color=text_color),
-                       legend.text = element_text(size=40, color=text_color),
+                       legend.title = element_text(size=35, color=text_color),
+                       legend.text = element_text(size=35, color=text_color),
                        legend.background = element_rect(fill=bg_color, size=1,linetype="solid",color=bg_color),
                        legend.key = element_rect(fill = bg_color,color = bg_color),
                        legend.key.width = unit(3, 'lines'),
@@ -115,7 +130,7 @@ basemap +
 #                        color = "#222222") +
   scale_colour_manual(values = colors) +
   labs(color = "",
-                title="Immigrants 2006 - 2011",
+                title="Immigrants 2011 - 2016",
                 caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
                 subtitle = paste0("1 dot = ",scale," people")) + 
   dot_density.dots_map(dots=dots.db,alpha=0.75,size=0.25)

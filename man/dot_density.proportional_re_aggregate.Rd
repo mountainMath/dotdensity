@@ -9,7 +9,7 @@ dot_density.proportional_re_aggregate(data, parent_data, geo_match, categories,
   base = "Population")
 }
 \arguments{
-\item{data}{The base geographic data (sp format)}
+\item{data}{The base geographic data (sp or sf format)}
 
 \item{parent_data}{Higher level geographic data (sp format)}
 

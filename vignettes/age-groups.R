@@ -1,0 +1,86 @@
+## ------------------------------------------------------------------------
+#devtools::install_github('mountainmath/dotdensity')
+library(dotdensity)
+#devtools::install_github('mountainmath/cancensus')
+library(cancensus)
+# options(cancensus.api_key)='<your API key>'
+
+## ---- message=FALSE, warning=FALSE---------------------------------------
+dataset='CA16'
+regions=list(CT=c("9330069.01","9330069.02"),CSD=c("5915022","5915803")) #list(CMA="59933")
+vectors=c("v_CA16_4","v_CA16_64","v_CA16_82","v_CA16_100","v_CA16_118","v_CA16_136","v_CA16_154","v_CA16_172","v_CA16_190","v_CA16_208","v_CA16_226","v_CA16_244")
+census_data <- get_census(dataset='CA16', regions=regions, vectors=vectors, level='CT')
+
+
+## ---- echo=FALSE, message=FALSE, warning=FALSE, fig.height=4, fig.width=4----
+theme_opts<-list(ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
+                       panel.grid.major = ggplot2::element_blank(),
+                       panel.background = ggplot2::element_rect(fill = 'light blue', colour = NA),
+                       plot.background = ggplot2::element_rect(fill="light grey",
+                       size=1,linetype="solid",color="black"),
+                       axis.line = ggplot2::element_blank(),
+                       axis.text.x = ggplot2::element_blank(),
+                       axis.text.y = ggplot2::element_blank(),
+                       axis.ticks = ggplot2::element_blank(),
+                       axis.title.x = ggplot2::element_blank(),
+                       axis.title.y = ggplot2::element_blank(),
+                       plot.title = ggplot2::element_text(size=22)))
+
+base_geom <- get_census(geo_format='sp',dataset=dataset, regions=regions, level="Regions")
+
+basemap <-   ggplot2::ggplot(base_geom) +
+    ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), fill = "white", size=0.1) +
+    #ggplot2::geom_polygon(ggplot2::aes(long, lat, group = group), colour = "#222222", fill = "white", size=0.1) +
+    ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(size=2))) +
+    ggplot2::labs(color = "label",caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca") +
+    ggplot2::coord_map(projection="lambert", lat0=49, lat=49.4) +
+    theme_opts
+
+## ---- message=TRUE, warning=TRUE, include=FALSE--------------------------
+# rename columns for better readability and compute aggregates
+prep_data <- function(geo){
+  data <- geo@data %>% replace(is.na(.), 0) %>%
+    mutate(
+      !!"0-19" := v_CA16_4 + v_CA16_64,
+      !!"20-34" := v_CA16_82 + v_CA16_100 + v_CA16_118,
+      !!"35-49" := v_CA16_136 + v_CA16_154 + v_CA16_172,
+      !!"50-64" := v_CA16_190 + v_CA16_208 + v_CA16_226,
+      !!"65+" := v_CA16_244
+           )
+  
+  ls=c("0-19","20-34","35-49","50-64","65+")
+  labels <- tibble(Vector=ls,Detail=ls)
+  
+
+  geo@data <- data
+  attributes(geo)$dot_labels <- labels
+  return(geo)
+}
+
+## ---- message=FALSE, warning=FALSE---------------------------------------
+
+data_ct <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
+data_da <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
+data_db <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
+
+## ------------------------------------------------------------------------
+# Set the categorie we want to map. Those are the labels except we want to replace the "Total" with the "Other" column
+categories=attributes(data_ct)$dot_labels$Detail
+colors=c("#0000ff", "#ff0000", "#ffff00", "#00ff00", "#00ffff")
+scale=10
+alpha=0.75
+size=0.5
+
+
+## ---- echo=FALSE, message=FALSE, warning=FALSE---------------------------
+# set map title using the scale and colour values
+title=paste0("People per Age Group\n1 dot = ",scale," people")
+basemap <- basemap + ggplot2::scale_colour_manual(title,values = colors) 
+
+## ----final-plot, fig.width=12--------------------------------------------
+data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+
+dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
+basemap + dot_density.dots_map(dots=dots.db,alpha=alpha,size=size)
+

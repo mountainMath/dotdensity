@@ -23,6 +23,8 @@ library(dotdensity)
 #devtools::install_github('mountainmath/cancensus')
 library(cancensus)
 # options(cancensus.api_key)='<your API key>'
+#devtools::install_github('mountainmath/cancensusHelpers')
+library(cancensusHelpers)
 ```
 
 
@@ -33,7 +35,7 @@ variables we need.
 dataset='CA16'
 regions=list(CSD="3520005")
 vectors=c("v_CA16_419","v_CA16_420","v_CA16_421","v_CA16_422","v_CA16_423")
-census_data <- get_census(dataset='CA16', regions=regions, vectors=vectors, level='CT')
+census_data <- get_census(dataset='CA16', regions=regions, vectors=vectors, level='CT',geo_format="sf")
 
 ```
 
@@ -67,16 +69,8 @@ We have defined a convenience function `prep_data` that renames variables.
 ```{r, message=TRUE, warning=TRUE, include=FALSE}
 # rename columns for better readability and compute aggregates
 prep_data <- function(geo){
-  data <- geo@data %>% replace(is.na(.), 0)
-  labels <- census_vectors(geo)
-  vs=labels$Vector
-  old_names=names(data)
-  for (i in 1:length(vs)) {
-    old_names[old_names==vs[i]] <- labels$Detail[labels$Vector==vs[i]]
-  }
-  names(data)=old_names
-
-  geo@data <- data
+  labels <- label_vectors(geo)
+  geo <- geo %>% detail_labels %>% replace(is.na(.), 0)
   attr(geo,'dot_labels') <- labels
   return(geo)
 }
@@ -84,9 +78,9 @@ prep_data <- function(geo){
 Armed with that we load in the geographic data for the dissemination blocks and the census data for the dissemination areas. As a pre-caution the census tract level data in case we are missing dissemmination block level data due to privacy or quality concerns, which in this particular case wasn't the case.
 ```{r, message=FALSE, warning=FALSE}
 
-data_ct <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
-data_da <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
-data_db <- get_census(geo_format='sp',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
+data_ct <- get_census(geo_format='sf',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="CT") %>% prep_data
+data_da <- get_census(geo_format='sf',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DA") %>% prep_data
+data_db <- get_census(geo_format='sf',labels='short',dataset=dataset, regions=regions, vectors=vectors,level="DB") 
 ```
 ## Mapping
 
@@ -109,8 +103,8 @@ basemap <- basemap + ggplot2::scale_colour_manual(title,values = colors)
 
 All that's left to do is re-aggregate and compute the dot locations and map them.
 ```{r, fig.width=12}
-data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Households")
-data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Households")
+data_da <- dot_density.proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Households")
+data_db <- dot_density.proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Households")
 
 dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
 basemap + dot_density.dots_map(dots=dots.db,alpha=alpha,size=size)

@@ -6,10 +6,10 @@
 Performs random rounding when scaling, randomly distributes dots in geographic areas and
 randomizes the order.}
 \usage{
-dot_density.compute_dots(geo_data, categories, scale = 1)
+dot_density.compute_dots(geo_data, categories, scale = 1, datum = NA)
 }
 \arguments{
-\item{geo_data}{The base geographic data (sp format)}
+\item{geo_data}{The base geographic data (sp or sf format)}
 
 \item{categories}{Vector of column names to re-aggreagte}
 
