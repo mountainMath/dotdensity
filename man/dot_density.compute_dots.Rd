@@ -14,6 +14,8 @@ dot_density.compute_dots(geo_data, categories, scale = 1, datum = NA)
 \item{categories}{Vector of column names to re-aggreagte}
 
 \item{scale}{How many units should be represented by 1 dot}
+
+\item{datum}{allow the selection of dataum in which we sample dots in polygon}
 }
 \description{
 Some of the code is inspired by https://www.blog.cultureofinsight.com/2017/06/building-dot-density-maps-with-uk-census-data-in-r/

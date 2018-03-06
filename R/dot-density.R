@@ -15,24 +15,24 @@
 #' @examples
 #' dot_density.proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
 dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
-  d1=data
-  d2=parent_data
-  vectors=categories
   #set NA to zero
-  d1 <- d1 %>% replace(is.na(.), 0)
-  d2 <- d2 %>% replace(is.na(.), 0)
+  d1=data %>% replace(is.na(.), 0)
+  d2=parent_data%>% replace(is.na(.), 0)
+  vectors=categories
   # create zero vectors if we don't have them on base (for example DB geo)
-  missing=setdiff(vectors,names(d1))
-  for (v in missing) {
+  for (v in setdiff(vectors,names(d1))) {
     d1 <- d1 %>% mutate(!!v := 0)
   }
   ## compute the weights
   basex=as.name(paste(base,'x',sep="."))
   basey=as.name(paste(base,'y',sep="."))
-  d1 <- d1 %>% inner_join(select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
+  ## maybe should be left join, but then have to worry about what happens if there is no match. For hierarchial data should always have higher level geo!
+  d1 <- inner_join(d1,select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
     mutate(weight = !!quo(UQ(basex) / UQ(basey)))  %>%
     replace(is.na(.), 0)
   ## aggregate variables up and down
+  ## lower level geography counts might have been suppressed, reaggregating these makes sure that the total number of
+  ## dots on the map are given by more accurate higher level geo counts, difference is distributed proportionally by *base*
   for (v in vectors) {
     vss=paste(v,'s',sep=".")
     vs=as.name(vss)
@@ -43,11 +43,11 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
       ungroup() %>%
       mutate(!!v := !!quo(UQ(vx) + weight * (UQ(vy) - UQ(vs))))
   }
-  d1 <- d1 %>% select(-ends_with('.y')) %>%
+  ## clean up and return
+  d1 %>% select(-ends_with('.y')) %>%
     mutate(!!base := !!basex) %>%
     select(-!!basex)  %>%
     replace(is.na(.), 0)
-  return(d1)
 }
 
 #' Dot density scale and compute dot data
@@ -59,6 +59,7 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
 #' @param geo_data The base geographic data (sp or sf format)
 #' @param categories Vector of column names to re-aggreagte
 #' @param scale How many units should be represented by 1 dot
+#' @param datum allow the selection of dataum in which we sample dots in polygon
 #' @keywords dot-density
 #' @export
 #' @examples
@@ -68,6 +69,8 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   orig_datum <- sf::st_crs(geo_data)$epsg
   if (is.na(datum)) datum=orig_datum
 
+  ## random rounding so that the total number of dots is preserved
+  ## simple rounding can lead to systematic bias
   random_round <- function(x) {
     v=as.integer(x)
     r=x-v
@@ -90,6 +93,7 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # system.time(maptools::dotsInPolys(d, as.integer(geo_data[[x]]), f="random"))
   # system.time(suppressMessages(sf::st_sample(geo_data, geo_data[[x]])))
 
+  # use maptools sampling method instead of sf_sample for performance reasons
   d<-as(geo_data %>% sf::st_as_sf() ,"Spatial")
   dfs <- lapply(categories, function(x) {
     y<-maptools::dotsInPolys(d, geo_data[[x]], f="random") %>%
