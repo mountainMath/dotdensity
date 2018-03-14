@@ -4,7 +4,6 @@ Title: Convenience Methods for Dot Density Maps
 Version: 0.1.0
 Authors@R: c(
     person("Jens", "von Bergmann", email = "jens@mountainmath.ca", role = c("aut", "cre")))
-Maintainer: The package maintainer <yourself@somewhere.net>
 Description: The package provides convenience methods for multiple category dot-density map.
 License: MIT + file LICENSE
 Encoding: UTF-8

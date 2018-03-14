@@ -29,7 +29,7 @@ categories=c("Americas","Europe","Africa + Oceania","Philippines","China","India
 colors=c("#7a0177", "#3333cc", "#ff00ff", "#00ffff", "#ff1a1c", "#4dff4a", "#ffff33")
 
 prep_data <- function(geo){
-  data <- geo@data %>% replace(is.na(.), 0)
+  data <- geo %>% replace(is.na(.), 0)
   data <- rename(data,
     total=v_CA16_3636,
     Americas=v_CA16_3639,                                  
@@ -37,13 +37,11 @@ prep_data <- function(geo){
     Philippines=v_CA16_3783,
     China=v_CA16_3750,
     India=v_CA16_3756)
-  data <- mutate(data,`Other Asian Countries` = v_CA16_3741-Philippines-China-India,
+  data %>% mutate(`Other Asian Countries` = v_CA16_3741-Philippines-China-India,
                      `Africa + Oceania`=v_CA16_3699 + v_CA16_3810)
-  geo@data <- data
-  return(geo)
 }
 prep_data_2011 <- function(geo){
-  data <- geo@data %>% replace(is.na(.), 0)
+  data <- geo %>% replace(is.na(.), 0)
   data <- rename(data,
     total=v_CA11N_265,
     Americas=v_CA11N_268,                                  
@@ -52,27 +50,26 @@ prep_data_2011 <- function(geo){
     Philippines=v_CA11N_376,
     China=v_CA11N_379,
     India=v_CA11N_382)
-  data <- mutate(data,`Other Asian Countries` = v_CA11N_373-Philippines-China-India)
-  geo@data <- data
-  return(geo)
+  data %>% mutate(`Other Asian Countries` = v_CA11N_373-Philippines-China-India)
 }
 ```
 
 
 Next we grab the data via `cancensus`,
 ```{r, echo=TRUE, message=FALSE, warning=FALSE}
-data_csd=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CSD') %>% prep_data
-data_ct=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='CT') %>% prep_data
-data_da=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sp',labels='short',level='DA') %>% prep_data
-data_db=get_census(dataset = 'CA16', regions=regions,geo_format='sp',labels='short',level='DB')
+data_csd=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sf',labels='short',level='CSD') %>% prep_data
+data_ct=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sf',labels='short',level='CT') %>% prep_data
+data_da=get_census(dataset = 'CA16', regions=regions,vectors=vectors,geo_format='sf',labels='short',level='DA') %>% prep_data
+data_db=get_census(dataset = 'CA16', regions=regions,geo_format='sf',labels='short',level='DB')
 ```
 
 which we then re-aggregate to make sure we don't miss overall counts due to privacy cutoffs distribute them
 proportionally among the population.
 ```{r}
-data_ct@data <- dot_density.proportional_re_aggregate(data=data_ct@data,parent_data=data_csd@data,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
-data_da@data <- dot_density.proportional_re_aggregate(data=data_da@data,parent_data=data_ct@data,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
-data_db@data <- dot_density.proportional_re_aggregate(data=data_db@data,parent_data=data_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+# ct level data does not always align with CSD, so use care when doing this
+data_ct <- dot_density.proportional_re_aggregate(data=data_ct,parent_data=data_csd,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
+data_da <- dot_density.proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+data_db <- dot_density.proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
 ```
 
 
@@ -102,9 +99,9 @@ theme_opts<-list(theme(panel.grid.minor = element_blank(),
                        legend.position = "bottom"))
 
 basemap <-   ggplot(data_csd) +
-    geom_polygon(aes(long, lat, group = group), fill = base_color, size=0.1, color = 'grey') +
+    geom_sf(fill = base_color, size=0.1, color = 'grey') +
     guides(colour = guide_legend(nrow=1,override.aes = list(size=15))) +
-    coord_map(projection="lambert", lat0=49, lat=49.4) +
+    #coord_sf(projection="lambert", lat0=49, lat=49.4) +
     theme_opts
 
 ```
@@ -113,29 +110,83 @@ basemap <-   ggplot(data_csd) +
 ##Map
 All that's left to do is to covert our re-aggregated block-level data to dots, using the `dot_density.compute_dots`
 function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
-our basemap.
-```{r, fig.height=10, fig.width=13, message=TRUE, warning=TRUE}
-# 1 dot = 5 immigrants
+our basemap. As a scale we take one dot to represent 5 people.
+```{r}
 scale=5
+```
 
 
-dots.db <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale)
+To better understand the effect of the **dot_density.proportional_reaggregate** function we show the dot-density maps using data from different aggregation levels.
+
+### CSD level
+```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
+# 1 dot = 5 immigrants
+dots <- dot_density.compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   # zoom in a bit
-  coord_fixed(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35), ratio = 1/cos(49.2/180*pi)) +
-# shade unpopulated blocks
-#  geom_polygon(data=data_db[data_db$Population<=5,], 
-#                        aes(long, lat, group = group), 
-#                        fill = "#222222", size=0.1, 
-#                        color = "#222222") +
+  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
   scale_colour_manual(values = colors) +
   labs(color = "",
                 title="Immigrants 2011 - 2016",
                 caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
                 subtitle = paste0("1 dot = ",scale," people")) + 
-  dot_density.dots_map(dots=dots.db,alpha=0.75,size=0.25)
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
 
-# save image for later
-ggsave('../images/recent_immigrants.png',width=26,height=26)
+ggsave('../images/recent_immigrants_CSD.png',width=26,height=26)
 ```
+
+### CT Level Data
+```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
+# 1 dot = 5 immigrants
+dots <- dot_density.compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
+basemap +
+  # zoom in a bit
+  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
+  scale_colour_manual(values = colors) +
+  labs(color = "",
+                title="Immigrants 2011 - 2016",
+                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+                subtitle = paste0("1 dot = ",scale," people")) + 
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+
+ggsave('../images/recent_immigrants_CT.png',width=26,height=26)
+```
+
+
+
+### DA Level Data
+```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
+# 1 dot = 5 immigrants
+dots <- dot_density.compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
+basemap +
+  # zoom in a bit
+  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
+  scale_colour_manual(values = colors) +
+  labs(color = "",
+                title="Immigrants 2011 - 2016",
+                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+                subtitle = paste0("1 dot = ",scale," people")) + 
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+
+ggsave('../images/recent_immigrants_DA.png',width=26,height=26)
+```
+
+
+### DB Level Data
+```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
+# 1 dot = 5 immigrants
+dots <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
+basemap +
+  # zoom in a bit
+  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
+  scale_colour_manual(values = colors) +
+  labs(color = "",
+                title="Immigrants 2011 - 2016",
+                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+                subtitle = paste0("1 dot = ",scale," people")) + 
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+
+ggsave('../images/recent_immigrants_DB.png',width=26,height=26)
+```
+
 

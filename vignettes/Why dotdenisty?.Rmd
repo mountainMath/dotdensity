@@ -1,0 +1,124 @@
+---
+title: "Vignette Title"
+author: "Jens von Bergmann"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(tidyverse)
+library(sf)
+```
+
+Multi-category dot-density maps can be very effective at communicating data. They are intuitive and visually appealing. This package contains two convenience functions that deal with two common problems with multi-category dot-density maps.
+
+When making dot-density maps we need to transform counts for our categories to dots that are suitable for drawing. Often we scale the data so that each dot represents a fixed number of people (or whatever the base category for our map is). We need to take cafe of two pitfalls in this process. Our scaled data doesn't generally contain integer counts any more but floats that we need to convert to an integer number of dots we want to draw. Naive rounding can lead to systematic bias in the total number of dots for each category. To see this, consider an example where we want to make a dot-density map of mother tongue, and suppose German as a mother tongue is evenly distributed across all census regions. When we scale our data so that 1 dot represents 50 people, naive rounding will round the German speakers alway in the same direction, leading to German speakers getting systematically over- or under-represented. The solution to this problem is to employ random rounding instead of simple rounding.
+
+The other problem concerns the ordering of the dots. It is important that once the data has been transformed into dots that the order of the dots be randomized so that not all dots of a particular colour are drawn last. Otherwise the dots drawn last will be visually over-represented in our map.
+
+The `dot_density.compute_dots` method takes care of these two issues and converts a spatial datframe containing polygon data into a spatial dataframe containing dots.
+
+The other convenience method concerns the situation where we have finer information about where in each census region the people are located. In the Canadian census, block level data gives information about where in a specific Dissemination Area people are living. The `dot_density.proportional_reaggregate` function will take counts from higher level census data and proportionally re-aggregate it to block level. This will result in visually more appealing maps as it concentrates the dots where people live and will leave other areas, like parks, empty.
+
+# Example
+As an example we look at the population in the Detroit-Windsor area by race. For the data in the Detroit area we use the `tidycensus` package to access the US Census Bureau API.
+
+```{r}
+library(tidycensus)
+racevars <- c(White = "P0050003", 
+              Black = "P0050004", 
+              Asian = "P0050006", 
+              Hispanic = "P0040003")
+categories <- c("White","Black","Asian","Hispanic","Other")
+detroit <- get_decennial(geography = "tract", variables = racevars, 
+                  state = "MI", county = "Wayne", geometry = TRUE,
+                  summary_var = "P0010001") %>%
+  spread(key="variable",value="value") %>%
+  mutate(Other=summary_value-White-Black-Asian-Hispanic, Name=NAME)
+```
+For the Windsor data we use `cancensus` to access the CensusMapper API. We choose the 2011 census year to match the data from the 2010 US decentennial census.
+
+```{r}
+library(cancensus)
+library(cancensusHelpers)
+region=search_census_regions("Windsor","CA11",level="CMA") %>% as_census_region_list()
+variables <- search_census_vectors("Visible minority for the population in private households","CA16","Total") %>% child_census_vectors(leaves_only=TRUE)
+windsor <- get_census("CA16",regions=region,vectors=variables$vector,level="DA",labels="short",geo_format="sf") %>% detail_labels %>%
+  mutate(White=`Not a visible minority`+Arab+`West Asian`,
+         Hispanic=`Latin American`,
+         Asian=Chinese+Korean+`South Asian`+Filipino+`Southeast Asian`+Japanese,
+         Other=`Visible minority, n.i.e.`+`Multiple visible minorities`,
+         Name=`Region Name`) %>%
+  st_transform(st_crs(detroit))
+```
+
+We simply combine these two into a common dataframe.
+
+```{r}
+common_categories=intersect(names(detroit),names(windsor))
+data <- rbind(detroit %>% select(common_categories),windsor %>% select(common_categories)) %>% 
+  mutate_at(categories,funs(replace(., is.na(.), 0)))
+```
+
+For contextual information we use the `rmapzen` package to extract basic OSM vector data from the NextZen tile server.
+
+```{r}
+library(rmapzen)
+#bbox=sf::st_bbox(data %>% sf::st_sf())
+bbox_geo <- read_sf("../data/bbox.geojson")
+bbox=st_bbox(bbox_geo)
+rmapzen::mz_set_tile_host_nextzen(getOption("nextzen_API_key"))
+mx_box=rmapzen::mz_rect(bbox$xmin,bbox$ymin,bbox$xmax,bbox$ymax)
+
+vector_tiles <- rmapzen::mz_vector_tiles(mx_box) 
+
+# vector tiles return all layers (roads, water, buildings, etc) in a list
+roads <- rmapzen::as_sf(vector_tiles$roads) %>% dplyr::filter(kind != "ferry")
+water <- rmapzen::as_sf(vector_tiles$water)
+```
+
+US census geometries don't cut out the great lakes very well, which leads to dots being placed on water. To avoid this, we can optionally cut out the water.
+```{r}
+clean_data <- st_difference(data,
+                      water %>%
+                        filter(area > 10000000) %>%
+                        st_transform(st_crs(detroit))) 
+```
+
+Next we convert our polygon data into dots.
+```{r}
+library(dotdensity)
+#polygons <- data %>% filter(st_intersects(.,st_transform(bbox_geo,st_crs(detroit)),sparse=FALSE)) # reduce computations
+dots <- dot_density.compute_dots(data,categories,scale=100) %>%
+  rename(Race=Category)
+```
+
+
+All that's left is to draw the map.
+
+```{r}
+limits <- bbox_geo %>% st_transform(st_crs(detroit)) %>% st_bbox
+ggplot() + 
+  geom_sf(data = water, fill = "lightblue", colour = NA) +
+  geom_sf(data = roads, size = .2, colour = "grey") +
+  geom_sf(data=dots, aes(color=Race),alpha=0.8,size=0.1,show.legend = "point") +
+  map_theme +
+  scale_color_brewer(palette = "Set1") +
+  labs("Cross-border Population by Race") +
+  theme(legend.position="bottom") + 
+  guides(colour = guide_legend(override.aes = list(size=3))) +
+  coord_sf(datum=st_crs(detroit),
+           expand=FALSE,
+           xlim=c(bbox$xmin,bbox$xmax),
+           ylim=c(bbox$ymin,bbox$ymax))
+  
+```
+

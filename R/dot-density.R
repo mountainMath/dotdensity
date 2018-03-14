@@ -16,20 +16,20 @@
 #' dot_density.proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
 dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
   #set NA to zero
-  d1=data %>% replace(is.na(.), 0)
-  d2=parent_data%>% replace(is.na(.), 0)
+  d1=data %>% dplyr::replace(is.na(.), 0)
+  d2=parent_data %>% dplyr::replace(is.na(.), 0)
   vectors=categories
   # create zero vectors if we don't have them on base (for example DB geo)
   for (v in setdiff(vectors,names(d1))) {
-    d1 <- d1 %>% mutate(!!v := 0)
+    d1 <- d1 %>% dplyr::mutate(!!v := 0)
   }
   ## compute the weights
   basex=as.name(paste(base,'x',sep="."))
   basey=as.name(paste(base,'y',sep="."))
   ## maybe should be left join, but then have to worry about what happens if there is no match. For hierarchial data should always have higher level geo!
-  d1 <- inner_join(d1,select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
-    mutate(weight = !!quo(UQ(basex) / UQ(basey)))  %>%
-    replace(is.na(.), 0)
+  d1 <- inner_join(d1,dplyr::select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
+    dplyr::mutate(weight = !!quo(UQ(basex) / UQ(basey)))  %>%
+    dplyr::replace(is.na(.), 0)
   ## aggregate variables up and down
   ## lower level geography counts might have been suppressed, reaggregating these makes sure that the total number of
   ## dots on the map are given by more accurate higher level geo counts, difference is distributed proportionally by *base*
@@ -39,15 +39,15 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
     vx=as.name(paste(v,'x',sep="."))
     vy=as.name(paste(v,'y',sep="."))
     d1 <- d1 %>% group_by(!!as.name(names(geo_match))) %>%
-      mutate(!!vss := sum(!!vx)) %>%
+      dplyr::mutate(!!vss := sum(!!vx)) %>%
       ungroup() %>%
-      mutate(!!v := !!quo(UQ(vx) + weight * (UQ(vy) - UQ(vs))))
+      dplyr::mutate(!!v := !!quo(UQ(vx) + weight * (UQ(vy) - UQ(vs))))
   }
   ## clean up and return
-  d1 %>% select(-ends_with('.y')) %>%
-    mutate(!!base := !!basex) %>%
-    select(-!!basex)  %>%
-    replace(is.na(.), 0)
+  d1 %>% dplyr::select(-ends_with('.y')) %>%
+    dplyr::mutate(!!base := !!basex) %>%
+    dplyr::select(-!!basex)  %>%
+    dplyr::replace(is.na(.), 0)
 }
 
 #' Dot density scale and compute dot data
@@ -83,8 +83,8 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   }
 
   geo_data <- geo_data %>%
-    mutate_at(categories,funs(./scale)) %>%
-    mutate_at(categories,random_round) %>%
+    dplyr::mutate_at(categories,funs(./scale)) %>%
+    dplyr::mutate_at(categories,random_round) %>%
     sf::st_as_sf() %>% sf::st_transform(datum)
 
   # # testing performance
@@ -98,8 +98,8 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   dfs <- lapply(categories, function(x) {
     y<-maptools::dotsInPolys(d, geo_data[[x]], f="random") %>%
       sf::st_as_sf() %>%
-      select(-ID) %>%
-      mutate(Category=x)
+      dplyr::select(-ID) %>%
+      dplyr::mutate(Category=x)
   })
   # st_sample is really slow...
   # dfs <- lapply(categories, function(x) {
@@ -111,7 +111,7 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # randomize order so as not to draw one color at a time, with last color on top.
 
   dots <- do.call(rbind,dfs) %>%
-    mutate(Category=factor(Category, levels = categories)) %>%
+    dplyr::mutate(Category=factor(Category, levels = categories)) %>%
     sample_n(nrow(.)) %>%
     sf::st_sf(crs=datum) %>%
     sf::st_transform(orig_datum)
@@ -119,7 +119,9 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   return(dots )
 }
 
-
+#' Not needed, remove!!
+#'
+#'
 #' Convenience function to produce dot-density input for ggplot2
 #' Uses geom_point instead of geom_sf to get proper legend labelling
 #' @param dots Dot data, e.g. output from dot_density.compute_dots
@@ -146,5 +148,9 @@ dot_density.dots_map <- function(dots,size=0.01,alpha=0.5){
                       alpha=alpha)
 }
 
+
+#' @importFrom dplyr %>%
+#' @importFrom rlang .data
+NULL
 
 
