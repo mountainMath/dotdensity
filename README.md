@@ -28,25 +28,10 @@ so no API points will get deducted. In fact, you don't even have to get your API
 ## Examples
 This package has been designed to be used in conjunction with [cancensus](https://github.com/mountainMath/cancensus) to pull in census data, but it also works with other data.
 
-The following example iamge was created using `cancensus` and `dotdensity`, you can find more details by reading throuhg our [language example vignette](https://mountainmath.ca/languages-example.nb.html) for a more thorough look, or you can [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/languages-example.Rmd).
+The main example is a cross-border map by ethnicity in the Detroit-Windsor region, where the data is pulled in using the `cancensus` package for Canada and the `tidycensus` package for the US. For details [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/Why dotdensity?.Rmd).
+
+The recent immigrants example was created using `cancensus` and `dotdensity`, it utilizes the census hierarchy for better placement of the dots. You can find more details [in the vignette](https://github.com/mountainMath/dotdensity/blob/master/vignettes/recent_immigrants.Rmd).
 
 
-![Toronto Buildings](images/dwellings.png)
-
-![Vancouver recent immigrants](images/recent_immigrants.png)
-
-
-![Vancouver languages](images/vancouver-languages.png)
-Similarly there are other vignettes in the package that look at patterns where recent immigrants settle
-![Recent Immigrants](images/recent_immigrants.png)
-
-
-or household size
-![Topronto Household Size](images/toronto-hh-size.png)
-
-or age groups
-![Vancouver Age Groups](images/vancouver-age.png)
-
-or family status.
-![Vancouver Family Status](images/vancouver-families.png)
+![Vancouver recent immigrants](https://github.com/mountainMath/dotdensity/blob/master/images/recent_immigrants_DB.png?raw=true)
 
