@@ -97,7 +97,7 @@ Next we convert our polygon data into dots.
 ```{r}
 library(dotdensity)
 #polygons <- data %>% filter(st_intersects(.,st_transform(bbox_geo,st_crs(detroit)),sparse=FALSE)) # reduce computations
-dots <- dot_density.compute_dots(data,categories,scale=100) %>%
+dots <- dot_density.compute_dots(data,categories,scale=20) %>%
   rename(Race=Category)
 ```
 
@@ -105,15 +105,19 @@ dots <- dot_density.compute_dots(data,categories,scale=100) %>%
 All that's left is to draw the map.
 
 ```{r}
+bg_color="#111111"
 limits <- bbox_geo %>% st_transform(st_crs(detroit)) %>% st_bbox
 ggplot() + 
-  geom_sf(data = water, fill = "lightblue", colour = NA) +
+  geom_sf(data = water, fill = "grey", colour = NA) +
   geom_sf(data = roads, size = .2, colour = "grey") +
-  geom_sf(data=dots, aes(color=Race),alpha=0.8,size=0.1,show.legend = "point") +
+  geom_sf(data=dots, aes(color=Race),alpha=0.75,size=0.05,show.legend = "point") +
   map_theme +
   scale_color_brewer(palette = "Set1") +
-  labs("Cross-border Population by Race") +
-  theme(legend.position="bottom") + 
+  labs(title="Detroit/Windsor Population by Race",subtitle="1 dot = 20 people") +
+  theme(legend.position="bottom",
+        panel.background = element_rect(fill = bg_color, colour = NA),
+        plot.background = element_rect(fill="white", size=1,linetype="solid",color=text_color)
+        ) + 
   guides(colour = guide_legend(override.aes = list(size=3))) +
   coord_sf(datum=st_crs(detroit),
            expand=FALSE,
