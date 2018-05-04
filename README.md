@@ -35,3 +35,6 @@ The recent immigrants example was created using `cancensus` and `dotdensity`, it
 
 ![Vancouver recent immigrants](https://github.com/mountainMath/dotdensity/blob/master/images/recent_immigrants_DB.png?raw=true)
 
+
+![Ethnicity in Detroid-Windsor](https://github.com/mountainMath/dotdensity/blob/master/images/race.png?raw=true)
+

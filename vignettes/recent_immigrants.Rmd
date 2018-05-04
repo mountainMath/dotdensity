@@ -17,6 +17,8 @@ First we grab the immigrant data via [cancensus](https://github.com/mountainMath
 #devtools::install_github("mountainmath/cancensus")
 library(cancensus)
 library(dotdensity)
+library(tidyverse)
+library(sf)
 # options(cancensus.api_key='your_api_key')
 regions=list(CMA="59933")
 vectors_2011=c("v_CA11N_265","v_CA11N_268","v_CA11N_304","v_CA11N_334","v_CA11N_373","v_CA11N_376","v_CA11N_379","v_CA11N_382")
@@ -96,13 +98,10 @@ theme_opts<-list(theme(panel.grid.minor = element_blank(),
                        legend.background = element_rect(fill=bg_color, size=1,linetype="solid",color=bg_color),
                        legend.key = element_rect(fill = bg_color,color = bg_color),
                        legend.key.width = unit(3, 'lines'),
-                       legend.position = "bottom"))
+                       legend.position = "bottom"),
+                 coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35))  # zoom in a bit
+)
 
-basemap <-   ggplot(data_csd) +
-    geom_sf(fill = base_color, size=0.1, color = 'grey') +
-    guides(colour = guide_legend(nrow=1,override.aes = list(size=15))) +
-    #coord_sf(projection="lambert", lat0=49, lat=49.4) +
-    theme_opts
 
 ```
 
@@ -112,7 +111,16 @@ All that's left to do is to covert our re-aggregated block-level data to dots, u
 function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
 our basemap. As a scale we take one dot to represent 5 people.
 ```{r}
-scale=5
+scale=5 # 1 dot = 5 immigrants
+
+basemap <-   ggplot(data_csd) +
+  geom_sf(fill = base_color, size=0.1, color = 'grey') +
+  guides(colour = guide_legend(nrow=1,override.aes = list(size=15))) +
+  theme_opts +
+  scale_colour_manual(values = colors) +
+  labs(color = "", title="Immigrants 2011 - 2016",
+       caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
+       subtitle = paste0("1 dot = ",scale," people"))
 ```
 
 
@@ -120,34 +128,20 @@ To better understand the effect of the **dot_density.proportional_reaggregate** 
 
 ### CSD level
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-# 1 dot = 5 immigrants
 dots <- dot_density.compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
 basemap +
-  # zoom in a bit
-  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
-  scale_colour_manual(values = colors) +
-  labs(color = "",
-                title="Immigrants 2011 - 2016",
-                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
-                subtitle = paste0("1 dot = ",scale," people")) + 
-  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
+  theme_opts
 
 ggsave('../images/recent_immigrants_CSD.png',width=26,height=26)
 ```
 
 ### CT Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-# 1 dot = 5 immigrants
 dots <- dot_density.compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
 basemap +
-  # zoom in a bit
-  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
-  scale_colour_manual(values = colors) +
-  labs(color = "",
-                title="Immigrants 2011 - 2016",
-                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
-                subtitle = paste0("1 dot = ",scale," people")) + 
-  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
+  theme_opts
 
 ggsave('../images/recent_immigrants_CT.png',width=26,height=26)
 ```
@@ -156,17 +150,10 @@ ggsave('../images/recent_immigrants_CT.png',width=26,height=26)
 
 ### DA Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-# 1 dot = 5 immigrants
 dots <- dot_density.compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
 basemap +
-  # zoom in a bit
-  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
-  scale_colour_manual(values = colors) +
-  labs(color = "",
-                title="Immigrants 2011 - 2016",
-                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
-                subtitle = paste0("1 dot = ",scale," people")) + 
-  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
+  theme_opts
 
 ggsave('../images/recent_immigrants_DA.png',width=26,height=26)
 ```
@@ -174,17 +161,10 @@ ggsave('../images/recent_immigrants_DA.png',width=26,height=26)
 
 ### DB Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-# 1 dot = 5 immigrants
 dots <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
 basemap +
-  # zoom in a bit
-  coord_sf(xlim=c(-123.29,-122.6), ylim=c(49.02,49.35)) +
-  scale_colour_manual(values = colors) +
-  labs(color = "",
-                title="Immigrants 2011 - 2016",
-                caption="Source: StatCan Census 2016 via cancensus & CensusMapper.ca",
-                subtitle = paste0("1 dot = ",scale," people")) + 
-  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point")
+  geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
+  theme_opts
 
 ggsave('../images/recent_immigrants_DB.png',width=26,height=26)
 ```

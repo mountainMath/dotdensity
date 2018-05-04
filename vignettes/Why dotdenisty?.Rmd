@@ -119,6 +119,6 @@ ggplot() +
            expand=FALSE,
            xlim=c(bbox$xmin,bbox$xmax),
            ylim=c(bbox$ymin,bbox$ymax))
-  
+ ggsave('../images/race.png',width=7,height=5) 
 ```
 
