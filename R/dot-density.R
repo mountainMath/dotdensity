@@ -16,8 +16,8 @@
 #' dot_density.proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
 dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
   #set NA to zero
-  d1=data %>% dplyr::replace(is.na(.), 0)
-  d2=parent_data %>% dplyr::replace(is.na(.), 0)
+  d1=data %>% replace(is.na(.), 0)
+  d2=parent_data %>% replace(is.na(.), 0)
   vectors=categories
   # create zero vectors if we don't have them on base (for example DB geo)
   for (v in setdiff(vectors,names(d1))) {
@@ -29,7 +29,7 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
   ## maybe should be left join, but then have to worry about what happens if there is no match. For hierarchial data should always have higher level geo!
   d1 <- inner_join(d1,dplyr::select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
     dplyr::mutate(weight = !!quo(UQ(basex) / UQ(basey)))  %>%
-    dplyr::replace(is.na(.), 0)
+    replace(is.na(.), 0)
   ## aggregate variables up and down
   ## lower level geography counts might have been suppressed, reaggregating these makes sure that the total number of
   ## dots on the map are given by more accurate higher level geo counts, difference is distributed proportionally by *base*
@@ -47,7 +47,7 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
   d1 %>% dplyr::select(-ends_with('.y')) %>%
     dplyr::mutate(!!base := !!basex) %>%
     dplyr::select(-!!basex)  %>%
-    dplyr::replace(is.na(.), 0)
+    replace(is.na(.), 0)
 }
 
 #' Dot density scale and compute dot data

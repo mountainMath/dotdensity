@@ -2,8 +2,7 @@
 % Please edit documentation in R/dot-density.R
 \name{dot_density.dots_map}
 \alias{dot_density.dots_map}
-\title{Convenience function to produce dot-density input for ggplot2
-Uses geom_point instead of geom_sf to get proper legend labelling}
+\title{Not needed, remove!!}
 \usage{
 dot_density.dots_map(dots, size = 0.01, alpha = 0.5)
 }
