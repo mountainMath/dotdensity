@@ -17,4 +17,4 @@ Suggests: knitr,
 VignetteBuilder: knitr
 URL: https://github.com/mountainMath/dotdensity
 BugReports: https://github.com/mountainMath/dotdensity/issues
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

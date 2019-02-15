@@ -24,9 +24,9 @@ When making dot-density maps we need to transform counts for our categories to d
 
 The other problem concerns the ordering of the dots. It is important that once the data has been transformed into dots that the order of the dots be randomized so that not all dots of a particular colour are drawn last. Otherwise the dots drawn last will be visually over-represented in our map.
 
-The `dot_density.compute_dots` method takes care of these two issues and converts a spatial datframe containing polygon data into a spatial dataframe containing dots.
+The `compute_dots` method takes care of these two issues and converts a spatial datframe containing polygon data into a spatial dataframe containing dots.
 
-The other convenience method concerns the situation where we have finer information about where in each census region the people are located. In the Canadian census, block level data gives information about where in a specific Dissemination Area people are living. The `dot_density.proportional_reaggregate` function will take counts from higher level census data and proportionally re-aggregate it to block level. This will result in visually more appealing maps as it concentrates the dots where people live and will leave other areas, like parks, empty.
+The other convenience method concerns the situation where we have finer information about where in each census region the people are located. In the Canadian census, block level data gives information about where in a specific Dissemination Area people are living. The `proportional_reaggregate` function will take counts from higher level census data and proportionally re-aggregate it to block level. This will result in visually more appealing maps as it concentrates the dots where people live and will leave other areas, like parks, empty.
 
 # Example
 As an example we look at the population in the Detroit-Windsor area by race. For the data in the Detroit area we use the `tidycensus` package to access the US Census Bureau API.
@@ -97,7 +97,7 @@ Next we convert our polygon data into dots.
 ```{r}
 library(dotdensity)
 #polygons <- data %>% filter(st_intersects(.,st_transform(bbox_geo,st_crs(detroit)),sparse=FALSE)) # reduce computations
-dots <- dot_density.compute_dots(data,categories,scale=20) %>%
+dots <- compute_dots(data,categories,scale=20) %>%
   rename(Race=Category)
 ```
 

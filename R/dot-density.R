@@ -13,8 +13,8 @@
 #' @keywords dot-density reaggregate
 #' @export
 #' @examples
-#' dot_density.proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
-dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
+#' proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
+proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
   #set NA to zero
   d1=data %>% replace(is.na(.), 0)
   d2=parent_data %>% replace(is.na(.), 0)
@@ -63,8 +63,8 @@ dot_density.proportional_re_aggregate <- function(data,parent_data,geo_match,cat
 #' @keywords dot-density
 #' @export
 #' @examples
-#' dot_density.compute_dots(ge_data=geo_db,categories=categories, scale=25)
-dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
+#' compute_dots(ge_data=geo_db,categories=categories, scale=25)
+compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   geo_data <- geo_data  %>% sf::st_as_sf()
   orig_datum <- sf::st_crs(geo_data)$epsg
   if (is.na(datum)) datum=orig_datum
@@ -82,10 +82,12 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
     return(value)
   }
 
-  geo_data <- geo_data %>%
-    dplyr::mutate_at(categories,funs(./scale)) %>%
-    dplyr::mutate_at(categories,random_round) %>%
-    sf::st_as_sf() %>% sf::st_transform(datum)
+  if (scale!=1) {
+    geo_data <- geo_data %>%
+      dplyr::mutate_at(categories,funs(./scale)) %>%
+      dplyr::mutate_at(categories,random_round)
+  }
+  geo_data <- geo_data %>% sf::st_transform(datum)
 
   # # testing performance
   # x=categories[1]
@@ -124,14 +126,14 @@ dot_density.compute_dots <- function(geo_data,categories,scale=1,datum=NA){
 #'
 #' Convenience function to produce dot-density input for ggplot2
 #' Uses geom_point instead of geom_sf to get proper legend labelling
-#' @param dots Dot data, e.g. output from dot_density.compute_dots
+#' @param dots Dot data, e.g. output from compute_dots
 #' @param size Size of each dot
 #' @param alpha Alpha value for the dots
 #' @keywords dot-density
 #' @export
 #' @examples
-#' dot_density.dots_map(dots,size=0.01,alpha=0.5)
-dot_density.dots_map <- function(dots,size=0.01,alpha=0.5){
+#' dots_map(dots,size=0.01,alpha=0.5)
+dots_map <- function(dots,size=0.01,alpha=0.5){
   sfc_as_cols <- function(x, names = c("x","y")) {
     stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
     ret <- sf::st_coordinates(x)

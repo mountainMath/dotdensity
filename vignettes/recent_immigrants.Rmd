@@ -69,9 +69,9 @@ which we then re-aggregate to make sure we don't miss overall counts due to priv
 proportionally among the population.
 ```{r}
 # ct level data does not always align with CSD, so use care when doing this
-data_ct <- dot_density.proportional_re_aggregate(data=data_ct,parent_data=data_csd,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
-data_da <- dot_density.proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
-data_db <- dot_density.proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+data_ct <- proportional_re_aggregate(data=data_ct,parent_data=data_csd,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
+data_da <- proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+data_db <- proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
 ```
 
 
@@ -107,8 +107,8 @@ theme_opts<-list(theme(panel.grid.minor = element_blank(),
 
 
 ##Map
-All that's left to do is to covert our re-aggregated block-level data to dots, using the `dot_density.compute_dots`
-function from the [`dotdensity` package]() and feed it into the `dot_density.dots_map` function to add them to
+All that's left to do is to covert our re-aggregated block-level data to dots, using the `compute_dots`
+function from the [`dotdensity` package]() and feed it into the `dots_map` function to add them to
 our basemap. As a scale we take one dot to represent 5 people.
 ```{r}
 scale=5 # 1 dot = 5 immigrants
@@ -124,11 +124,11 @@ basemap <-   ggplot(data_csd) +
 ```
 
 
-To better understand the effect of the **dot_density.proportional_reaggregate** function we show the dot-density maps using data from different aggregation levels.
+To better understand the effect of the **proportional_reaggregate** function we show the dot-density maps using data from different aggregation levels.
 
 ### CSD level
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-dots <- dot_density.compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -138,7 +138,7 @@ ggsave('../images/recent_immigrants_CSD.png',width=26,height=26)
 
 ### CT Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-dots <- dot_density.compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -150,7 +150,7 @@ ggsave('../images/recent_immigrants_CT.png',width=26,height=26)
 
 ### DA Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-dots <- dot_density.compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -161,7 +161,7 @@ ggsave('../images/recent_immigrants_DA.png',width=26,height=26)
 
 ### DB Level Data
 ```{r, fig.height=14, fig.width=14, message=FALSE, warning=FALSE}
-dots <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts

@@ -17,7 +17,7 @@ prep_data <- function(geo){
   data <- geo %>% replace(is.na(.), 0)
   data <- rename(data,
     total=v_CA16_3636,
-    Americas=v_CA16_3639,                                  
+    Americas=v_CA16_3639,
     Europe=v_CA16_3669,
     Philippines=v_CA16_3783,
     China=v_CA16_3750,
@@ -29,7 +29,7 @@ prep_data_2011 <- function(geo){
   data <- geo %>% replace(is.na(.), 0)
   data <- rename(data,
     total=v_CA11N_265,
-    Americas=v_CA11N_268,                                  
+    Americas=v_CA11N_268,
     Europe=v_CA11N_304,
     Africa=v_CA11N_334,
     Philippines=v_CA11N_376,
@@ -46,9 +46,9 @@ data_db=get_census(dataset = 'CA16', regions=regions,geo_format='sf',labels='sho
 
 ## ------------------------------------------------------------------------
 # ct level data does not always align with CSD, so use care when doing this
-data_ct <- dot_density.proportional_re_aggregate(data=data_ct,parent_data=data_csd,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
-data_da <- dot_density.proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
-data_db <- dot_density.proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
+data_ct <- proportional_re_aggregate(data=data_ct,parent_data=data_csd,geo_match=setNames("GeoUID","CSD_UID"),categories=categories,base="Population")
+data_da <- proportional_re_aggregate(data=data_da,parent_data=data_ct,geo_match=setNames("GeoUID","CT_UID"),categories=categories,base="Population")
+data_db <- proportional_re_aggregate(data=data_db,parent_data=data_da,geo_match=setNames("GeoUID","DA_UID"),categories=categories,base="Population")
 
 ## ---- echo=FALSE, message=FALSE, warning=FALSE---------------------------
 library(ggplot2)
@@ -92,7 +92,7 @@ basemap <-   ggplot(data_csd) +
        subtitle = paste0("1 dot = ",scale," people"))
 
 ## ---- fig.height=14, fig.width=14, message=FALSE, warning=FALSE----------
-dots <- dot_density.compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_csd, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -100,7 +100,7 @@ basemap +
 ggsave('../images/recent_immigrants_CSD.png',width=26,height=26)
 
 ## ---- fig.height=14, fig.width=14, message=FALSE, warning=FALSE----------
-dots <- dot_density.compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_ct, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -108,7 +108,7 @@ basemap +
 ggsave('../images/recent_immigrants_CT.png',width=26,height=26)
 
 ## ---- fig.height=14, fig.width=14, message=FALSE, warning=FALSE----------
-dots <- dot_density.compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_da, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts
@@ -116,7 +116,7 @@ basemap +
 ggsave('../images/recent_immigrants_DA.png',width=26,height=26)
 
 ## ---- fig.height=14, fig.width=14, message=FALSE, warning=FALSE----------
-dots <- dot_density.compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
+dots <- compute_dots(geo_data = data_db, categories = categories, scale=scale) %>% st_as_sf
 basemap +
   geom_sf(data=dots,aes(color=Category),alpha=0.75,size=0.25,show.legend = "point") +
   theme_opts

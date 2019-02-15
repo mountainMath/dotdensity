@@ -28,7 +28,7 @@ so no API points will get deducted. In fact, you don't even have to get your API
 ## Examples
 This package has been designed to be used in conjunction with [cancensus](https://github.com/mountainMath/cancensus) to pull in census data, but it also works with other data.
 
-The main example is a cross-border map by ethnicity in the Detroit-Windsor region, where the data is pulled in using the `cancensus` package for Canada and the `tidycensus` package for the US. For details [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/Why dotdensity?.Rmd).
+The main example is a cross-border map by ethnicity in the Detroit-Windsor region, where the data is pulled in using the `cancensus` package for Canada and the `tidycensus` package for the US. For details [view the code](https://github.com/mountainMath/dotdensity/blob/master/vignettes/why_dotdensity.Rmd).
 
 The recent immigrants example was created using `cancensus` and `dotdensity`, it utilizes the census hierarchy for better placement of the dots. You can find more details [in the vignette](https://github.com/mountainMath/dotdensity/blob/master/vignettes/recent_immigrants.Rmd).
 
