@@ -5,3 +5,4 @@
 vignettes/data_cache
 vignettes/data_cache/*
 inst/doc
+.DS_Store

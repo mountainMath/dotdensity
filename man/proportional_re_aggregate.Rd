@@ -5,8 +5,13 @@
 \title{Dot density data merge function
 Cleans the data and prepares them for dot-density maps}
 \usage{
-proportional_re_aggregate(data, parent_data, geo_match, categories,
-  base = "Population")
+proportional_re_aggregate(
+  data,
+  parent_data,
+  geo_match,
+  categories,
+  base = "Population"
+)
 }
 \arguments{
 \item{data}{The base geographic data (sp or sf format)}
@@ -23,9 +28,6 @@ proportional_re_aggregate(data, parent_data, geo_match, categories,
 Data at lower aggregation levels may not add up to the more accurate aggregate counts.
 This function distributes the aggregate level counts proprtionally (by population) to the containing lower
 leve geographic regions.
-}
-\examples{
-proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
 }
 \keyword{dot-density}
 \keyword{reaggregate}

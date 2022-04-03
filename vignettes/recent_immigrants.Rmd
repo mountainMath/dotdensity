@@ -2,7 +2,7 @@
 title: "Recent Immigrants"
 author: "Jens von Bergmann"
 date: "2017-08-26"
-output: html_notebook
+output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Recent Immigrants}
   %\VignetteEngine{knitr::rmarkdown}

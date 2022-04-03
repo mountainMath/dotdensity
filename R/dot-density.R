@@ -12,8 +12,6 @@
 #' @param base Column name to use for proportional weighting when re-aggregating
 #' @keywords dot-density reaggregate
 #' @export
-#' @examples
-#' proportional_re_aggregate(data=geo_db@data,parent_data=geo_da@data,geo_match=setNames("GeoUID","DA_UID"),categories=categories)
 proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
   #set NA to zero
   d1=data %>% replace(is.na(.), 0)
@@ -27,8 +25,9 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
   basex=as.name(paste(base,'x',sep="."))
   basey=as.name(paste(base,'y',sep="."))
   ## maybe should be left join, but then have to worry about what happens if there is no match. For hierarchial data should always have higher level geo!
-  d1 <- inner_join(d1,dplyr::select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))), by=geo_match) %>%
-    dplyr::mutate(weight = !!quo(UQ(basex) / UQ(basey)))  %>%
+  d1 <- dplyr::inner_join(d1,dplyr::select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))),
+                          by=geo_match) %>%
+    dplyr::mutate(weight = !!basex / !!basey)  %>%
     replace(is.na(.), 0)
   ## aggregate variables up and down
   ## lower level geography counts might have been suppressed, reaggregating these makes sure that the total number of
@@ -38,13 +37,14 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
     vs=as.name(vss)
     vx=as.name(paste(v,'x',sep="."))
     vy=as.name(paste(v,'y',sep="."))
-    d1 <- d1 %>% group_by(!!as.name(names(geo_match))) %>%
+    d1 <- d1 %>%
+      dplyr::group_by(!!as.name(names(geo_match))) %>%
       dplyr::mutate(!!vss := sum(!!vx)) %>%
-      ungroup() %>%
-      dplyr::mutate(!!v := !!quo(UQ(vx) + weight * (UQ(vy) - UQ(vs))))
+      dplyr::ungroup() %>%
+      dplyr::mutate(!!v := !!vx + .data$weight * !!vy - !!vs)
   }
   ## clean up and return
-  d1 %>% dplyr::select(-ends_with('.y')) %>%
+  d1 %>% dplyr::select(-dplyr::ends_with('.y')) %>%
     dplyr::mutate(!!base := !!basex) %>%
     dplyr::select(-!!basex)  %>%
     replace(is.na(.), 0)
@@ -62,8 +62,6 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
 #' @param datum allow the selection of dataum in which we sample dots in polygon
 #' @keywords dot-density
 #' @export
-#' @examples
-#' compute_dots(ge_data=geo_db,categories=categories, scale=25)
 compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   geo_data <- geo_data  %>% sf::st_as_sf()
   orig_datum <- sf::st_crs(geo_data)$epsg
@@ -74,7 +72,7 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   random_round <- function(x) {
     v=as.integer(x)
     r=x-v
-    test=runif(length(r), 0.0, 1.0)
+    test=stats::runif(length(r), 0.0, 1.0)
     add=rep(as.integer(0),length(r))
     add[r>test] <- as.integer(1)
     value=v+add
@@ -84,7 +82,7 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
 
   if (scale!=1) {
     geo_data <- geo_data %>%
-      dplyr::mutate_at(categories,funs(./scale)) %>%
+      dplyr::mutate_at(categories,~(./scale)) %>%
       dplyr::mutate_at(categories,random_round)
   }
   geo_data <- geo_data %>% sf::st_transform(datum)
@@ -96,11 +94,11 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # system.time(suppressMessages(sf::st_sample(geo_data, geo_data[[x]])))
 
   # use maptools sampling method instead of sf_sample for performance reasons
-  d<-as(geo_data %>% sf::st_as_sf() ,"Spatial")
+  d<-sf::as_Spatial(geo_data %>% sf::st_as_sf())
   dfs <- lapply(categories, function(x) {
-    y<-maptools::dotsInPolys(d, geo_data[[x]], f="random") %>%
+    y<-maptools::dotsInPolys(d, geo_data[[x]] %>% tidyr::replace_na(0), f="random") %>%
       sf::st_as_sf() %>%
-      dplyr::select(-ID) %>%
+      dplyr::select(-.data$ID) %>%
       dplyr::mutate(Category=x)
   })
   # st_sample is really slow...
@@ -113,8 +111,8 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # randomize order so as not to draw one color at a time, with last color on top.
 
   dots <- do.call(rbind,dfs) %>%
-    dplyr::mutate(Category=factor(Category, levels = categories)) %>%
-    sample_n(nrow(.)) %>%
+    dplyr::mutate(Category=factor(.data$Category, levels = categories)) %>%
+    dplyr::slice_sample(n=nrow(.),replace = FALSE) %>%
     sf::st_sf(crs=datum) %>%
     sf::st_transform(orig_datum)
 
@@ -131,8 +129,6 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
 #' @param alpha Alpha value for the dots
 #' @keywords dot-density
 #' @export
-#' @examples
-#' dots_map(dots,size=0.01,alpha=0.5)
 dots_map <- function(dots,size=0.01,alpha=0.5){
   sfc_as_cols <- function(x, names = c("x","y")) {
     stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
@@ -140,10 +136,10 @@ dots_map <- function(dots,size=0.01,alpha=0.5){
     ret <- tibble::as_tibble(ret)
     stopifnot(length(names) == ncol(ret))
     x <- x[ , !names(x) %in% names]
-    ret <- setNames(ret,names)
+    ret <- stats::setNames(ret,names)
     dplyr::bind_cols(x,ret)
   }
-  ggplot2::geom_point(data = dots %>% sfc_as_cols,
+  ggplot2::geom_point(data = dots %>% sfc_as_cols(),
                       ggplot2::aes(x, y, colour = Category),
                       shape=20,
                       size=size,
@@ -151,8 +147,12 @@ dots_map <- function(dots,size=0.01,alpha=0.5){
 }
 
 
+# Suppress warnings for missing bindings for '.' in R CMD check.
+if (getRversion() >= "2.15.1") utils::globalVariables(c("."))
+
 #' @importFrom dplyr %>%
 #' @importFrom rlang .data
+#' @importFrom rlang :=
 NULL
 
 

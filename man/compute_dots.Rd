@@ -20,7 +20,4 @@ compute_dots(geo_data, categories, scale = 1, datum = NA)
 \description{
 Some of the code is inspired by https://www.blog.cultureofinsight.com/2017/06/building-dot-density-maps-with-uk-census-data-in-r/
 }
-\examples{
-compute_dots(ge_data=geo_db,categories=categories, scale=25)
-}
 \keyword{dot-density}

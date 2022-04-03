@@ -8,13 +8,21 @@ Description: The package provides convenience methods for multiple category dot-
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
-Depends: dplyr (>= 0.7.2)
+Depends: dplyr (>= 1.0.0),
+  rlang
 Suggests: knitr,
   cancensus,
   ggplot2 (>= 2.2.1.9000),
+  rmarkdown,
   sf,
-  rmarkdown
+  rmapzen,
+  cancensusHelpers,
+  tidycensus,
+  tidyverse,
+  maptools,
+  tibble,
+  tidyr
 VignetteBuilder: knitr
 URL: https://github.com/mountainMath/dotdensity
 BugReports: https://github.com/mountainMath/dotdensity/issues
-RoxygenNote: 6.1.1
+RoxygenNote: 7.1.2

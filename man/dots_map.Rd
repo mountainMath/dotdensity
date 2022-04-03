@@ -17,7 +17,4 @@ dots_map(dots, size = 0.01, alpha = 0.5)
 Convenience function to produce dot-density input for ggplot2
 Uses geom_point instead of geom_sf to get proper legend labelling
 }
-\examples{
-dots_map(dots,size=0.01,alpha=0.5)
-}
 \keyword{dot-density}
