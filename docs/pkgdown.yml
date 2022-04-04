@@ -1,0 +1,8 @@
+pandoc: 2.17.1.1
+pkgdown: 2.0.2
+pkgdown_sha: ~
+articles:
+  recent_immigrants: recent_immigrants.html
+  why_dotdensity: why_dotdensity.html
+last_built: 2022-04-04T04:53Z
+

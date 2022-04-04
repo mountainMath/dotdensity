@@ -108,8 +108,7 @@ theme_opts<-list(theme(panel.grid.minor = element_blank(),
 
 ##Map
 All that's left to do is to covert our re-aggregated block-level data to dots, using the `compute_dots`
-function from the [`dotdensity` package]() and feed it into the `dots_map` function to add them to
-our basemap. As a scale we take one dot to represent 5 people.
+function from the [`dotdensity` package](https://github.com/mountainMath/dotdensity) and add the result to the basemap. As a scale we take one dot to represent 5 people.
 ```{r}
 scale=5 # 1 dot = 5 immigrants
 

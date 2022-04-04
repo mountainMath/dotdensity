@@ -98,7 +98,7 @@ clean_data <- st_difference(data,
 Next we convert our polygon data into dots.
 ```{r}
 library(dotdensity)
-#polygons <- data %>% filter(st_intersects(.,st_transform(bbox_geo,st_crs(detroit)),sparse=FALSE)) # reduce computations
+
 dots <- compute_dots(data,categories,scale=20) %>%
   rename(Race=Category)
 ```

@@ -25,7 +25,9 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
   basex=as.name(paste(base,'x',sep="."))
   basey=as.name(paste(base,'y',sep="."))
   ## maybe should be left join, but then have to worry about what happens if there is no match. For hierarchial data should always have higher level geo!
-  d1 <- dplyr::inner_join(d1,dplyr::select(d2 %>% as.data.frame,c(vectors,c(as.character(geo_match),base))),
+  d1 <- dplyr::inner_join(d1,
+                          dplyr::select(d2 %>% as.data.frame,
+                                        dplyr::all_of(c(vectors,c(as.character(geo_match),base)))),
                           by=geo_match) %>%
     dplyr::mutate(weight = !!basex / !!basey)  %>%
     replace(is.na(.), 0)
@@ -41,7 +43,7 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
       dplyr::group_by(!!as.name(names(geo_match))) %>%
       dplyr::mutate(!!vss := sum(!!vx)) %>%
       dplyr::ungroup() %>%
-      dplyr::mutate(!!v := !!vx + .data$weight * !!vy - !!vs)
+      dplyr::mutate(!!v := !!vx + .data$weight * (!!vy - !!vs))
   }
   ## clean up and return
   d1 %>% dplyr::select(-dplyr::ends_with('.y')) %>%
@@ -110,41 +112,17 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # all colors in single vector and randomize order
   # randomize order so as not to draw one color at a time, with last color on top.
 
+  rows <- lapply(dfs,nrow) %>% unlist %>% sum()
+
   dots <- do.call(rbind,dfs) %>%
     dplyr::mutate(Category=factor(.data$Category, levels = categories)) %>%
-    dplyr::slice_sample(n=nrow(.),replace = FALSE) %>%
+    dplyr::slice_sample(.,n=nrow(.), replace = FALSE) %>%
     sf::st_sf(crs=datum) %>%
     sf::st_transform(orig_datum)
 
   return(dots )
 }
 
-#' Not needed, remove!!
-#'
-#'
-#' Convenience function to produce dot-density input for ggplot2
-#' Uses geom_point instead of geom_sf to get proper legend labelling
-#' @param dots Dot data, e.g. output from compute_dots
-#' @param size Size of each dot
-#' @param alpha Alpha value for the dots
-#' @keywords dot-density
-#' @export
-dots_map <- function(dots,size=0.01,alpha=0.5){
-  sfc_as_cols <- function(x, names = c("x","y")) {
-    stopifnot(inherits(x,"sf") && inherits(sf::st_geometry(x),"sfc_POINT"))
-    ret <- sf::st_coordinates(x)
-    ret <- tibble::as_tibble(ret)
-    stopifnot(length(names) == ncol(ret))
-    x <- x[ , !names(x) %in% names]
-    ret <- stats::setNames(ret,names)
-    dplyr::bind_cols(x,ret)
-  }
-  ggplot2::geom_point(data = dots %>% sfc_as_cols(),
-                      ggplot2::aes(x, y, colour = Category),
-                      shape=20,
-                      size=size,
-                      alpha=alpha)
-}
 
 
 # Suppress warnings for missing bindings for '.' in R CMD check.
