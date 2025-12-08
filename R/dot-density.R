@@ -13,6 +13,10 @@
 #' @keywords dot-density reaggregate
 #' @export
 proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base="Population"){
+  return(tongfen::proportional_reaggregate(data=data,parent_data=parent_data,geo_match=geo_match,categories=categories,base=base))
+
+  # old code
+
   #set NA to zero
   d1=data %>% replace(is.na(.), 0)
   d2=parent_data %>% replace(is.na(.), 0)
@@ -66,19 +70,19 @@ proportional_re_aggregate <- function(data,parent_data,geo_match,categories,base
 #' @export
 compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   geo_data <- geo_data  %>% sf::st_as_sf()
-  orig_datum <- sf::st_crs(geo_data)$epsg
+  orig_datum <- sf::st_crs(geo_data)
   if (is.na(datum)) datum=orig_datum
 
   ## random rounding so that the total number of dots is preserved
   ## simple rounding can lead to systematic bias
   random_round <- function(x) {
-    v=as.integer(x)
-    r=x-v
-    test=stats::runif(length(r), 0.0, 1.0)
-    add=rep(as.integer(0),length(r))
+    v <- as.integer(x)
+    r <- x-v
+    test <- stats::runif(length(r), 0.0, 1.0)
+    add <- rep(as.integer(0),length(r))
     add[r>test] <- as.integer(1)
-    value=v+add
-    ifelse(is.na(value) | value<0,0,value)
+    value <- v+add
+    value <- ifelse(is.na(value) | value<0,0,value)
     return(value)
   }
 
@@ -96,18 +100,21 @@ compute_dots <- function(geo_data,categories,scale=1,datum=NA){
   # system.time(suppressMessages(sf::st_sample(geo_data, geo_data[[x]])))
 
   # use maptools sampling method instead of sf_sample for performance reasons
-  d<-sf::as_Spatial(geo_data %>% sf::st_as_sf())
-  dfs <- lapply(categories, function(x) {
-    y<-maptools::dotsInPolys(d, geo_data[[x]] %>% tidyr::replace_na(0), f="random") %>%
-      sf::st_as_sf() %>%
-      dplyr::select(-.data$ID) %>%
-      dplyr::mutate(Category=x)
-  })
-  # st_sample is really slow...
+
+    # d<-sf::as_Spatial(geo_data %>% sf::st_as_sf())
   # dfs <- lapply(categories, function(x) {
-  #   tibble(geometry=suppressMessages(sf::st_sample(geo_data, geo_data[[x]])),
-  #          Category=x) %>% sf::st_sf()
+  #   y<-maptools::dotsInPolys(d, geo_data[[x]] %>% tidyr::replace_na(0), f="random") %>%
+  #     sf::st_as_sf() %>%
+  #     dplyr::select(-.data$ID) %>%
+  #     dplyr::mutate(Category=x)
   # })
+
+  # st_sample is really slow...
+  dfs <- lapply(categories, function(x) {
+    tibble(geometry=suppressMessages(sf::st_sample(geo_data, geo_data[[x]],
+                                                   warn_if_not_integer = FALSE)),
+           Category=x) %>% sf::st_sf()
+  })
 
   # all colors in single vector and randomize order
   # randomize order so as not to draw one color at a time, with last color on top.

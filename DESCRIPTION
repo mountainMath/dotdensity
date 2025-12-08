@@ -12,6 +12,7 @@ Depends: dplyr (>= 1.0.0),
   rlang
 Suggests: knitr,
   cancensus,
+  tongfen,
   ggplot2 (>= 2.2.1.9000),
   rmarkdown,
   sf,
@@ -25,4 +26,4 @@ Suggests: knitr,
 VignetteBuilder: knitr
 URL: https://github.com/mountainMath/dotdensity
 BugReports: https://github.com/mountainMath/dotdensity/issues
-RoxygenNote: 7.1.2
+RoxygenNote: 7.3.3
